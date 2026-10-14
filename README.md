@@ -4,7 +4,8 @@ A Python command-line tool for reviewing SSH password-login logs and explaining 
 
 ## Current status
 
-Phase 1 is **Implemented — awaiting review**. The CLI parses the documented SSH
+Phase 1 is **Accepted**, following owner-reported independent review of commit
+`aaa183c0adfe37a734a5431bf8b1db51b930ce22`. The CLI parses the documented SSH
 password-login format and prints an activity summary. Detection, configuration,
 and JSON export remain planned. See [docs/PLAN.md](docs/PLAN.md) for phase status.
 
@@ -84,7 +85,8 @@ export in Phase 1. The supported format requires a year, timezone, host,
 timestamps and public-key authentication are skipped. Files must be UTF-8;
 invalid encoding is an error. Events are held in memory, so very large logs
 are not a streaming workflow. Python 3.11 is the minimum target; verification
-was performed on Python 3.14.6 on Windows, not on every supported version.
+was performed on Python 3.14.6 on Windows and independently on Python 3.12.14
+on Linux. Python 3.11 remains unverified.
 
 No live monitoring, blocking, threat-intelligence lookup, or account
 remediation. A shared IP can represent multiple people, and missing logs can
@@ -99,7 +101,7 @@ than established proof of an attack.
 
 ## Delivery evidence
 
-Phase 1 verification on Windows with Python 3.14.6:
+Original implementation verification by Codex on Windows with Python 3.14.6:
 
 - `python -m unittest discover -s tests`: 27 tests passed, exit 0.
 - `python loginwatch.py samples/sample.log`: exit 0; exact output above matches the independently documented fixture expectations.
@@ -107,5 +109,23 @@ Phase 1 verification on Windows with Python 3.14.6:
 
 Permission-denied handling is tested with a mock; missing-file, directory,
 invalid-encoding, and other CLI behavior are tested through subprocesses.
-This workspace has no Git metadata, so Git status/diff checks are unavailable.
-The owner reviews Phase 1 before assigning Phase 2; no acceptance is implied.
+The original implementation workspace lacked Git metadata, so Git status/diff
+checks were unavailable at that time. This was a historical workspace
+limitation. The current workspace is the Git checkout for
+`https://github.com/rujiraji/LoginWatch`, with `origin` pointing to that repository.
+
+Independent review reported by the owner (separate from Codex's checks):
+
+- Reviewed commit: `aaa183c0adfe37a734a5431bf8b1db51b930ce22`.
+- Linux, Python 3.12.14: all 27 tests passed and sample output matched expectations.
+- Additional checks passed for a 120-event dataset, timezone boundaries, and invalid UTF-8 after valid data.
+- No blocking issues were found; the owner accepted Phase 1. Python 3.11 remains unverified.
+
+Codex acceptance-handoff checks on 2026-10-14, Windows, Python 3.14.6:
+
+- Confirmed the repository root, `origin` URL, and clean working tree; the implementation matched the reviewed commit exactly before documentation changes.
+- `python -m unittest discover -s tests`: 27 tests passed, exit 0.
+- `python loginwatch.py samples/sample.log`: exit 0; output matched the verified output above.
+- After `git fetch origin`, `origin/main` was still at planning commit `2f3759d168b4972dd072618a5945d2d8f1af1415`; Phase 1 had not been merged.
+
+Phase 2 implementation waits for the owner to merge the Phase 1 PR into `main`.

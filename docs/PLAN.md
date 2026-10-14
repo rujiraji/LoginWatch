@@ -7,7 +7,7 @@ Codex: implementation, tests, documentation, and verification evidence.
 
 | Phase | Status |
 | --- | --- |
-| 1. Parser and activity summary | Implemented — awaiting review |
+| 1. Parser and activity summary | Accepted |
 | 2. Detection and evidence | Planned |
 | 3. Configuration and JSON reports | Planned |
 | 4. Release and portfolio delivery | Planned |
@@ -70,8 +70,10 @@ After each phase, Codex reports changed components, commands executed, results, 
 
 ## Current assignment
 
-Phase 1 implementation is complete and awaiting owner review. Stop at this
-phase boundary; Phase 2 requires the owner's next assignment.
+Phase 1 is accepted following the owner's independent review. Finalize its
+documentation on `phase-1-core` and open a PR into `main`; the owner performs
+the merge. Phase 2 has been assigned conditionally on that merge. Do not begin
+Phase 2 while Phase 1 remains unmerged.
 
 ## Phase 1 implementation and verification
 
@@ -100,10 +102,47 @@ failure and keeps the documented format consistent across Python versions.
 Limitations: Python 3.11 was not tested; compatibility is
 targeted, not demonstrated on every version. Permission denial is simulated
 with a mock, while actual missing-file, directory-input, and invalid-UTF-8
-failures are exercised by subprocess tests. No Git metadata exists in this
-workspace, so status/diff checks were unavailable. All events are kept in
-memory. Detection, configuration, export, and release delivery remain planned.
+failures are exercised by subprocess tests. The original implementation
+workspace lacked Git metadata, so status/diff checks were unavailable at that
+time; this is a historical limitation, not the current repository state. All
+events are kept in memory. Detection, configuration, export, and release
+delivery remain planned.
 
-Owner review: rerun the two README commands, compare the sample output with
-the documented fixture expectations, and review the input grammar and component
-flow. The owner decides whether to accept Phase 1 and assign Phase 2.
+## Phase 1 acceptance and independent review
+
+The owner accepted Phase 1 based on independent review of commit
+`aaa183c0adfe37a734a5431bf8b1db51b930ce22`. The following results were reported
+by the owner; they are not checks run by Codex:
+
+- Environment: Linux, Python 3.12.14.
+- All 27 tests passed.
+- Sample output matched documented expectations.
+- Additional checks passed for a 120-event dataset, timezone boundaries, and invalid UTF-8 after valid data.
+- No blocking issues were found. Python 3.11 remains unverified.
+
+## Phase 1 acceptance-handoff checks by Codex
+
+On 2026-10-14, Codex verified the current workspace is the actual checkout for
+`https://github.com/rujiraji/LoginWatch`. `origin` uses that repository URL.
+The working tree was clean, `HEAD` and `phase-1-core` pointed to the reviewed
+commit, and `git diff aaa183c0adfe37a734a5431bf8b1db51b930ce22 --` was empty
+before documentation edits. No repository was initialized or implementation
+overwritten.
+
+Checks run by Codex on Windows, Python 3.14.6:
+
+| Command | Result |
+| --- | --- |
+| `python --version` | `Python 3.14.6`, exit 0 |
+| `python -m unittest discover -s tests` | 27 tests passed, exit 0 |
+| `python loginwatch.py samples/sample.log` | Exit 0; 9 events, 4 successes, 5 failures, 3 IPs, 5 usernames, 2 blank lines, 4 skipped lines |
+| `git fetch origin` | Completed successfully; `origin/main` remained at planning commit `2f3759d168b4972dd072618a5945d2d8f1af1415` |
+
+The existing local `phase-2-detection` branch was inspected: it pointed to the
+reviewed Phase 1 commit and had no additional commits or working-tree changes.
+It was left unchanged. No Phase 2 implementation has begun.
+
+Next step: the owner merges the Phase 1 PR. Then update `main` with a
+fast-forward-only pull and inspect the existing `phase-2-detection` branch
+before reusing it for the assigned detection work. Do not merge PRs as Codex
+or begin Phase 3.
