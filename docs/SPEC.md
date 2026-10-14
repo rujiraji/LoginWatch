@@ -1,7 +1,8 @@
 # LoginWatch specification
 
 Status: design baseline, version 0.1. Phase 1 input, events, activity summary,
-and positional-path CLI are Implemented — awaiting review. Detection (Phase 2)
+and positional-path CLI are Accepted following owner-reported independent
+review of commit `aaa183c0adfe37a734a5431bf8b1db51b930ce22`. Detection (Phase 2)
 and configuration/JSON export (Phase 3) are planned, not implemented.
 
 ## Goal and user workflow
