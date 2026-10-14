@@ -5,8 +5,10 @@ A Python command-line tool for reviewing SSH password-login logs and explaining 
 ## Current status
 
 Phase 1 is **Accepted**, following owner-reported independent review of commit
-`aaa183c0adfe37a734a5431bf8b1db51b930ce22`. Phase 2 is **Implemented — awaiting
-review**. The CLI parses the documented SSH password-login format, prints the
+`aaa183c0adfe37a734a5431bf8b1db51b930ce22`. Phase 2 is **Accepted**, following
+owner-reported independent review of commit
+`4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2. The CLI parses the
+documented SSH password-login format, prints the
 activity summary, and explains findings from three default detection rules.
 Configuration and JSON export remain planned. See [docs/PLAN.md](docs/PLAN.md)
 for phase status.
@@ -131,9 +133,9 @@ report export are unavailable. The supported format requires a year, timezone, h
 timestamps and public-key authentication are skipped. Files must be UTF-8;
 invalid encoding is an error. Events are held in memory, so very large logs
 are not a streaming workflow. Python 3.11 is the minimum target; verification
-for Phase 2 was performed on Python 3.14.6 on Windows. Independent Phase 1
-review also covered Python 3.12.14 on Linux; it does not verify Phase 2.
-Python 3.11 remains unverified, and Phase 2 has not been tested on Linux here.
+for Phase 2 was performed by Codex on Python 3.14.6 on Windows and independently
+on Python 3.12.14 on Linux. Python 3.11 and large-log performance remain
+unverified. The independent review evidence is recorded separately below.
 
 No live monitoring, blocking, threat-intelligence lookup, or account
 remediation. A shared IP can represent multiple people, and missing logs can
@@ -191,5 +193,23 @@ Phase 2 verification by Codex on 2026-10-14, Windows, Python 3.14.6:
 - `python loginwatch.py --help`: exit 0; describes the summary, detection, and UTF-8 input.
 - `git diff --check`: passed.
 
-Stop at Phase 2 for independent review; only the owner may accept and merge
-this phase. Phase 3 requires a separate assignment.
+Independent Phase 2 review reported by the owner (not checks run by Codex):
+
+- Reviewed commit: `4b51f8e998a6dfe193d2a95000859ee382c83342`, PR #2.
+- Linux, Python 3.12.14: all 69 tests and the sample, normal, suspicious, and help commands passed.
+- All five suspicious findings matched the documented triggers and supporting evidence.
+- An independent reference calculation matched 400 generated datasets of 180 events each, covering triggers, evidence, ordering, IDs, metadata, repeatability, and input preservation.
+- No blocking issues were found; the owner accepted Phase 2. Python 3.11 and large-log performance remain unverified.
+
+Codex Phase 2 acceptance-handoff checks on 2026-10-14, Windows, Python 3.14.6:
+
+- Verified the actual repository root and `origin` URL; the clean `phase-2-detection` checkout and remote branch matched the reviewed commit before documentation changes.
+- `python -m unittest discover -s tests`: 69 tests passed, exit 0.
+- `python loginwatch.py samples/sample.log`: exit 0; original counts, zero findings.
+- `python loginwatch.py samples/normal.log`: exit 0; documented counts, zero findings.
+- `python loginwatch.py samples/suspicious.log`: exit 0; documented counts and five findings with the expected evidence.
+- `python loginwatch.py --help`: exit 0.
+- `git diff --check`: passed.
+
+PR #2 is ready for the owner to merge. Phase 3 has been assigned conditionally
+on that merge; implementation stops here while PR #2 remains unmerged.

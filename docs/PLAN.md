@@ -8,7 +8,7 @@ Codex: implementation, tests, documentation, and verification evidence.
 | Phase | Status |
 | --- | --- |
 | 1. Parser and activity summary | Accepted |
-| 2. Detection and evidence | Implemented — awaiting review |
+| 2. Detection and evidence | Accepted |
 | 3. Configuration and JSON reports | Planned |
 | 4. Release and portfolio delivery | Planned |
 
@@ -71,10 +71,14 @@ After each phase, Codex reports changed components, commands executed, results, 
 ## Current assignment
 
 Phase 1 is Accepted and was merged by the owner via PR #1 at commit `357ea3e`.
-Implement Phase 2 detection and console evidence only on `phase-2-detection`,
-then commit, push, and open a PR into `main` using the authenticated terminal's
-GitHub CLI. Phase 2 is now Implemented — awaiting review. Stop for independent
-review; do not merge or begin Phase 3.
+Phase 2 is Accepted following independent review of commit
+`4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2. Finalize acceptance
+documentation on `phase-2-detection`, commit, and push. The owner performs the
+merge; stop while PR #2 is unmerged. Phase 3 configuration and JSON export have
+been assigned conditionally on that merge. Then read the repository documents,
+update `main` using a fast-forward-only pull, and create `phase-3-reports` (or
+inspect an existing branch before reusing it without reset/overwrite).
+Do not merge PRs or begin Phase 4 as Codex.
 
 ## Phase 1 implementation and verification
 
@@ -187,9 +191,9 @@ independent tables in `samples/README.md`. The suspicious demo includes the
 inclusive 300/600-second boundaries, repeated qualifying successes, unrelated
 out-of-order input, and rearming when evidence expires during a silent gap.
 
-Limitations: Phase 2 was verified only on Windows/Python 3.14.6 here; Python
-3.11 and Phase 2 on Linux remain unverified. The Linux/Python 3.12.14 review
-above applies to Phase 1 only. Events and evidence are retained in memory;
+Verification scope at implementation: Codex tested Windows/Python 3.14.6 only.
+The later independent Phase 2 review below verifies Linux/Python 3.12.14.
+Python 3.11 remains unverified. Events and evidence are retained in memory;
 large-log performance has not been benchmarked. Fixed rules are investigation
 heuristics, not proof of compromise. Console output includes full source log
 text and can be lengthy. IDs are source-scoped rather than globally unique.
@@ -198,5 +202,42 @@ database, and external integrations were not implemented.
 
 GitHub CLI was found at `C:\Program Files\GitHub CLI\gh.exe` and is
 authenticated as `rujiraji`; it is absent from this process's PATH and is
-invoked by its absolute path. Use that terminal CLI to open the Phase 2 PR.
-The owner reviews, accepts, and merges it; Codex stops at this boundary.
+invoked by its absolute path. That terminal CLI created PR #2 into `main`.
+The owner reviews, accepts, and merges it; Codex stops at the phase boundary.
+
+## Phase 2 acceptance and independent review
+
+The owner accepted Phase 2 based on independent review of commit
+`4b51f8e998a6dfe193d2a95000859ee382c83342`, PR #2. These results were reported
+by the owner and are separate from checks run by Codex:
+
+- Linux, Python 3.12.14: all 69 tests passed.
+- Sample, normal, suspicious, and help commands passed.
+- All five suspicious findings matched documented triggers and supporting evidence.
+- An independent reference calculation matched 400 generated datasets of 180 events each, covering triggers, evidence, ordering, IDs, metadata, repeatability, and input preservation.
+- No blocking issues were found. Python 3.11 and large-log performance remain unverified.
+
+## Phase 2 acceptance-handoff checks by Codex
+
+On 2026-10-14, Codex verified the actual Git checkout's repository root and
+`origin` pointing to `https://github.com/rujiraji/LoginWatch.git`. The working tree was
+clean on `phase-2-detection`; `HEAD` and `origin/phase-2-detection` matched the
+reviewed commit. `git diff 4b51f8e998a6dfe193d2a95000859ee382c83342 --` was empty
+before documentation edits. No implementation or unrelated work was changed.
+
+Checks run by Codex on Windows, Python 3.14.6:
+
+| Exact command | Result |
+| --- | --- |
+| `python --version` | `Python 3.14.6`, exit 0 |
+| `python -m unittest discover -s tests` | 69 tests passed, exit 0 |
+| `python loginwatch.py samples/sample.log` | Exit 0; original counts unchanged, zero findings |
+| `python loginwatch.py samples/normal.log` | Exit 0; 8 events, 6 successes, 2 failures, 3 IPs, 3 usernames, no blank/skipped lines, zero findings |
+| `python loginwatch.py samples/suspicious.log` | Exit 0; 14 events, 3 successes, 11 failures, 3 IPs, 7 usernames, no blank/skipped lines, five findings matching documented triggers and evidence |
+| `python loginwatch.py --help` | Exit 0 |
+| `git diff --check` | Passed |
+| `git fetch origin` | Completed successfully; `origin/main` remained at Phase 1 merge commit `357ea3e18e7684944e63bfc7d81d8469ab974a84` |
+
+The authenticated terminal's GitHub CLI confirmed
+`https://github.com/rujiraji/LoginWatch/pull/2` was OPEN with no merge timestamp.
+PR #2 is ready for the owner's merge; Codex did not merge it or begin Phase 3.

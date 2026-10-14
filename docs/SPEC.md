@@ -3,7 +3,8 @@
 Status: design baseline, version 0.1. Phase 1 input, events, activity summary,
 and positional-path CLI are Accepted following owner-reported independent
 review of commit `aaa183c0adfe37a734a5431bf8b1db51b930ce22`. Detection and console
-evidence (Phase 2) are Implemented — awaiting review. Configuration/JSON export
+evidence (Phase 2) are Accepted following owner-reported independent review of
+commit `4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2. Configuration/JSON export
 (Phase 3) are planned, not implemented.
 
 ## Goal and user workflow
