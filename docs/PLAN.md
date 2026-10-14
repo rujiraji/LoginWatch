@@ -8,7 +8,7 @@ Codex: implementation, tests, documentation, and verification evidence.
 | Phase | Status |
 | --- | --- |
 | 1. Parser and activity summary | Accepted |
-| 2. Detection and evidence | Planned |
+| 2. Detection and evidence | Implemented — awaiting review |
 | 3. Configuration and JSON reports | Planned |
 | 4. Release and portfolio delivery | Planned |
 
@@ -70,10 +70,11 @@ After each phase, Codex reports changed components, commands executed, results, 
 
 ## Current assignment
 
-Phase 1 is accepted following the owner's independent review. Finalize its
-documentation on `phase-1-core` and open a PR into `main`; the owner performs
-the merge. Phase 2 has been assigned conditionally on that merge. Do not begin
-Phase 2 while Phase 1 remains unmerged.
+Phase 1 is Accepted and was merged by the owner via PR #1 at commit `357ea3e`.
+Implement Phase 2 detection and console evidence only on `phase-2-detection`,
+then commit, push, and open a PR into `main` using the authenticated terminal's
+GitHub CLI. Phase 2 is now Implemented — awaiting review. Stop for independent
+review; do not merge or begin Phase 3.
 
 ## Phase 1 implementation and verification
 
@@ -105,8 +106,8 @@ with a mock, while actual missing-file, directory-input, and invalid-UTF-8
 failures are exercised by subprocess tests. The original implementation
 workspace lacked Git metadata, so status/diff checks were unavailable at that
 time; this is a historical limitation, not the current repository state. All
-events are kept in memory. Detection, configuration, export, and release
-delivery remain planned.
+events are kept in memory. At the Phase 1 boundary, detection, configuration,
+export, and release delivery remained planned.
 
 ## Phase 1 acceptance and independent review
 
@@ -138,11 +139,64 @@ Checks run by Codex on Windows, Python 3.14.6:
 | `python loginwatch.py samples/sample.log` | Exit 0; 9 events, 4 successes, 5 failures, 3 IPs, 5 usernames, 2 blank lines, 4 skipped lines |
 | `git fetch origin` | Completed successfully; `origin/main` remained at planning commit `2f3759d168b4972dd072618a5945d2d8f1af1415` |
 
-The existing local `phase-2-detection` branch was inspected: it pointed to the
+At the Phase 1 handoff, the existing local `phase-2-detection` branch was inspected: it pointed to the
 reviewed Phase 1 commit and had no additional commits or working-tree changes.
 It was left unchanged. No Phase 2 implementation has begun.
 
-Next step: the owner merges the Phase 1 PR. Then update `main` with a
+The next step at that handoff was for the owner to merge the Phase 1 PR, update `main` with a
 fast-forward-only pull and inspect the existing `phase-2-detection` branch
 before reusing it for the assigned detection work. Do not merge PRs as Codex
-or begin Phase 3.
+or begin Phase 3. The owner has since merged Phase 1; the Phase 2 record follows.
+
+## Phase 2 implementation and verification
+
+On 2026-10-14, Codex found a clean checkout on `main` at merge commit `357ea3e`,
+with `origin` pointing to `https://github.com/rujiraji/LoginWatch.git`.
+`git pull --ff-only origin main` completed successfully (already up to date).
+The existing `phase-2-detection` branch had no unique commits or changes;
+it was inspected, switched to, and fast-forwarded to `main` without reset or
+overwrite.
+
+Changed components:
+
+- `models.py`: immutable findings with deterministic source-scoped IDs, thresholds, explanations, and complete evidence snapshots.
+- `analyzer.py`: sorted-view UTC analysis using the three fixed default rules, inclusive boundaries, source-line tie-breaking, and episode expiry before new failures are appended. Parsing stays independent and unchanged.
+- `reporter.py` and `loginwatch.py`: preserved summary and input errors, followed by console findings with every supporting source line and raw record.
+- `samples/normal.log`, `samples/suspicious.log`, and `samples/README.md`: synthetic demos and independently specified summary/finding expectations.
+- `tests/`: trigger/below-threshold, boundary/just-outside, correlation/negative cases, ordering/offsets, interleaving, suppression/rearming (including silent gaps), repeated successes, deterministic IDs, exact evidence membership, normal/empty input, and CLI regressions.
+- README and SPEC: current behavior, demo results, episode policy, evidence contracts, and limitations.
+
+The parser produces immutable events and source-line counts. The CLI sends
+events to the analyzer, which sorts a separate view and returns ordered
+findings. The reporter formats the original summary plus finding explanations
+and source evidence. Detection never changes parsed source ordering.
+
+Verification by Codex: Windows PowerShell, Python 3.14.6, standard library only.
+
+| Exact command | Result |
+| --- | --- |
+| `python -m unittest discover -s tests` | 69 tests passed, exit 0 |
+| `python loginwatch.py samples/sample.log` | Exit 0; original counts unchanged, zero findings |
+| `python loginwatch.py samples/normal.log` | Exit 0; 8 events, 6 successes, 2 failures, 3 IPs, 3 usernames, 0 blank/skipped lines, zero findings |
+| `python loginwatch.py samples/suspicious.log` | Exit 0; 14 events, 3 successes, 11 failures, 3 IPs, 7 usernames, 0 blank/skipped lines, five findings |
+| `python loginwatch.py --help` | Exit 0; summary/detection description and input-path help |
+| `git diff --check` | Passed |
+
+The sample and demo counts, rules, UTC triggers, and evidence lines match the
+independent tables in `samples/README.md`. The suspicious demo includes the
+inclusive 300/600-second boundaries, repeated qualifying successes, unrelated
+out-of-order input, and rearming when evidence expires during a silent gap.
+
+Limitations: Phase 2 was verified only on Windows/Python 3.14.6 here; Python
+3.11 and Phase 2 on Linux remain unverified. The Linux/Python 3.12.14 review
+above applies to Phase 1 only. Events and evidence are retained in memory;
+large-log performance has not been benchmarked. Fixed rules are investigation
+heuristics, not proof of compromise. Console output includes full source log
+text and can be lengthy. IDs are source-scoped rather than globally unique.
+Permission denial remains mock-tested. Configuration, JSON export, dashboard,
+database, and external integrations were not implemented.
+
+GitHub CLI was found at `C:\Program Files\GitHub CLI\gh.exe` and is
+authenticated as `rujiraji`; it is absent from this process's PATH and is
+invoked by its absolute path. Use that terminal CLI to open the Phase 2 PR.
+The owner reviews, accepts, and merges it; Codex stops at this boundary.

@@ -36,7 +36,8 @@ class CliTests(unittest.TestCase):
         result = self.run_cli("samples/sample.log")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stderr, "")
-        self.assertEqual(result.stdout, EXPECTED_SAMPLE_OUTPUT + "\n")
+        self.assertEqual(result.stdout, EXPECTED_SAMPLE_OUTPUT + "\n\nFindings: 0\n"
+                         "No suspicious patterns detected by the three default rules.\n")
         self.assertEqual(path.read_bytes(), original)
 
     def test_empty_file_and_path_with_spaces(self):
@@ -54,6 +55,9 @@ Unique IPs: 0
 Unique usernames: 0
 Ignored blank lines: 0
 Skipped nonblank lines: 0
+
+Findings: 0
+No suspicious patterns detected by the three default rules.
 """)
 
     def test_unsupported_file_completes_with_zero_events(self):
@@ -85,6 +89,40 @@ Skipped nonblank lines: 0
             path.write_bytes(original)
             self.assert_input_error(self.run_cli(path), "provide a UTF-8 text file")
             self.assertEqual(path.read_bytes(), original)
+
+    def test_invalid_utf8_after_valid_data_has_no_partial_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "invalid_after_valid.log"
+            original = (ROOT / "samples" / "suspicious.log").read_bytes() + b"\xff"
+            path.write_bytes(original)
+            self.assert_input_error(self.run_cli(path), "provide a UTF-8 text file")
+            self.assertEqual(path.read_bytes(), original)
+
+    def test_normal_demo(self):
+        result = self.run_cli("samples/normal.log")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stderr, "")
+        self.assertIn("Parsed events: 8\nSuccessful logins: 6\nFailed logins: 2\n", result.stdout)
+        self.assertIn("Findings: 0\n", result.stdout)
+
+    def test_suspicious_demo_reports_reasons_and_supporting_lines(self):
+        path = ROOT / "samples" / "suspicious.log"
+        original = path.read_bytes()
+        result = self.run_cli("samples/suspicious.log")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stderr, "")
+        self.assertIn("Parsed events: 14\nSuccessful logins: 3\nFailed logins: 11\n", result.stdout)
+        self.assertIn("Findings: 5\n", result.stdout)
+        self.assertEqual(result.stdout.count("Supporting source lines:"), 5)
+        self.assertIn("[repeated_failures:192.0.2.10:line-5]", result.stdout)
+        self.assertIn("[success_after_failures:192.0.2.10:line-6]", result.stdout)
+        self.assertIn("[success_after_failures:192.0.2.10:line-7]", result.stdout)
+        self.assertIn("[multiple_accounts:198.51.100.20:line-13]", result.stdout)
+        self.assertIn("[multiple_accounts:198.51.100.20:line-14]", result.stdout)
+        self.assertNotIn("  line 8:", result.stdout)
+        self.assertIn("threshold: 5 failures", result.stdout)
+        self.assertIn("threshold: 5 distinct usernames", result.stdout)
+        self.assertEqual(path.read_bytes(), original)
 
     def test_permission_denied_without_platform_dependent_permissions(self):
         stdout, stderr = io.StringIO(), io.StringIO()

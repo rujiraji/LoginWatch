@@ -2,8 +2,9 @@
 
 Status: design baseline, version 0.1. Phase 1 input, events, activity summary,
 and positional-path CLI are Accepted following owner-reported independent
-review of commit `aaa183c0adfe37a734a5431bf8b1db51b930ce22`. Detection (Phase 2)
-and configuration/JSON export (Phase 3) are planned, not implemented.
+review of commit `aaa183c0adfe37a734a5431bf8b1db51b930ce22`. Detection and console
+evidence (Phase 2) are Implemented — awaiting review. Configuration/JSON export
+(Phase 3) are planned, not implemented.
 
 ## Goal and user workflow
 
@@ -14,7 +15,8 @@ A user supplies a local SSH log file. LoginWatch parses supported events, summar
 Planned first release: Python CLI, one documented password-login format, IPv4
 and IPv6, three detection rules, configurable thresholds, console output, JSON
 export, synthetic fixtures, meaningful tests, and a repeatable demo. Phase 1
-delivers parsing and console summary only.
+delivers parsing and console summary; Phase 2 adds default detection rules and
+console evidence.
 
 Out of scope: dashboard, database, email or chat alerts, real-time collection, automatic blocking, external intelligence services, arbitrary log formats, and machine learning. PT/PERSTAT automation is a separate project.
 
@@ -59,6 +61,9 @@ The Phase 1 fixture `samples/sample.log` has 9 parsed events, 4 successes,
 
 Evaluate events in UTC timestamp order, using original line number to break ties. Window endpoints are inclusive. Interleaved unrelated events must not reset a window. Findings describe suspicious activity, not confirmed attacks.
 
+Analyze a sorted view; never mutate parsed events or their source ordering.
+The Phase 2 CLI uses the fixed defaults below; it does not load configuration.
+
 | Rule ID | Grouping | Default trigger |
 | --- | --- | --- |
 | repeated_failures | IP | At least 5 failures within 300 seconds |
@@ -69,11 +74,49 @@ Success-after-failures is independently evaluated against same-account failures;
 
 ### Finding emission
 
-For repeated failures and multiple accounts, emit on the first qualifying failure in an active episode. Suppress later findings for the same rule and group while the rolling window remains above threshold; start a new episode if it falls below threshold and later qualifies again. Keep the evidence window at the trigger rather than expanding it indefinitely.
+For repeated failures and multiple accounts, emit on the first qualifying failure in an active episode. Suppress later findings for the same rule and group while the rolling window remains at or above threshold; start a new episode if it falls below threshold and later qualifies again. Keep the evidence window at the trigger rather than expanding it indefinitely.
+
+An episode ends when expiration reduces qualifying evidence below threshold,
+including during a gap with no events. Before adding each new failure, expire
+old evidence and check the remaining count (failures or distinct usernames).
+If it is below threshold, rearm the rule for that IP; then add the new failure
+and evaluate. That failure can immediately restore the threshold and emit a
+new finding. Evidence exactly `window_seconds` before the event remains
+included; only older evidence expires. Expiring some evidence while the
+remaining evidence is still at or above threshold does not end the episode.
+Successes do not reset failure episodes or clear failure history. Episode
+state is independent per rule and IP. Expiration is evaluated lazily at the
+next relevant event, yielding the same findings as expiry during silent gaps.
 
 For success after failures, emit one finding per qualifying successful event. Do not merge distinct successful events. Different rules may cite the same event.
 
 Each finding contains a deterministic ID, rule ID, IP, affected usernames, trigger timestamp, evidence start/end timestamps, event count, applicable thresholds, a plain-language explanation, and supporting event records with line numbers. Use neutral wording, not an unsupported certainty or severity score.
+
+Implemented `Finding` fields: `id`, `rule_id`, `ip`, sorted unique `usernames`,
+`trigger_timestamp`, `evidence_start`, `evidence_end`, `event_count`,
+`threshold_count`, `window_seconds`, `explanation`, and immutable `evidence`.
+`threshold_count` measures failures for the first two rules and distinct
+usernames for `multiple_accounts`.
+
+Evidence membership:
+
+- Repeated failures: all IP-matching failures in the inclusive 300-second window, including the triggering failure.
+- Multiple accounts: all IP-matching failures in the inclusive 600-second window, including repeated usernames and the trigger, rather than one representative per account.
+- Success after failures: all preceding same-IP/account failures in the inclusive 600-second window, followed by the triggering success. Other successes and failures after that success in sorted order are excluded.
+
+`event_count` is the number of supporting records, including the success for
+success-after-failures. Evidence records retain timestamp/source-line ordering.
+Start/end times are the first/last evidence timestamps. Snapshots never grow
+after emission. IDs use `<rule_id>:<normalized IP>:line-<trigger source line>`;
+they are scoped to the analyzed source and stable across identical runs.
+They are not globally unique across files, and line-number changes change IDs.
+Findings sort by trigger timestamp, rule ID, IP, usernames, and triggering
+source line as a final tie-breaker.
+
+`samples/normal.log` independently expects no findings; `samples/suspicious.log`
+expects one repeated-failure finding, two qualifying-success findings, and two
+multiple-account episodes. Exact trigger/evidence lines and explanations of
+these expectations are in `samples/README.md`.
 
 ## Configuration — Phase 3
 
@@ -101,6 +144,15 @@ Exit 0 for completed analysis, including skipped lines or suspicious findings. U
 Phase 1 implements argparse help now. Completed summaries exit 0; input read
 or decoding errors exit 1 and write a concise message to stderr without a
 traceback or partial summary. Argument errors exit 2. UTF-8 decoding is strict.
+
+Phase 2 preserves these summary and error behaviors and appends a findings
+section after a blank line. The section always reports `Findings: N`. Zero
+findings are followed by `No suspicious patterns detected by the three default
+rules.` Each finding prints its ID/rule, UTC trigger, IP/usernames, reason and
+threshold, evidence count/time range, and all original supporting records
+prefixed by source line number. UTC metadata uses ISO timestamps ending in
+`Z`; raw evidence retains its original timestamp spelling. All input is read
+successfully before any summary or findings are printed. Findings still exit 0.
 
 Planned Phase 3 JSON report contains schema_version, source filename, summary,
 effective configuration, and findings. Serialize UTC timestamps consistently
