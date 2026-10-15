@@ -26,10 +26,29 @@ commands, JSON summaries/rules/thresholds/evidence, repeatable bytes, source
 preservation, and temporary-file cleanup passed. This review applies to commit
 `16751333a60bec6f93ec6568a46ecefb08d63966` and is distinct from Phase 4 checks.
 
-Phase 4 fresh-checkout and CI results will be recorded in [PLAN.md](PLAN.md)
-after execution. A workflow definition alone does not establish compatibility
-or a passing check. CI uses hosted Python installations and performs no
-application package install.
+Phase 4 verification by Codex on 2026-10-15: a clean GitHub clone at
+`76b5f3bc1f38e4094de75b5fe6d00f8230e82061`, Windows/Python 3.14.6, using a new
+virtual environment created without pip. No installed distributions were
+present. Unittest reported `Ran 138 tests; OK (skipped=6)`; local symlink
+creation is unavailable. All seven demo/help commands, full JSON/evidence
+checks, repeat-byte comparisons, source preservation, and temporary cleanup
+passed. The two literal documented export commands passed as well.
+
+[CI run 38804423752](https://github.com/rujiraji/LoginWatch/actions/runs/38804423752)
+for PR #4 passed all four jobs, each with 138 tests and **no skips**:
+
+| Hosted platform | Verified Python versions |
+| --- | --- |
+| Ubuntu | 3.11.17 and 3.14.8 |
+| Windows | 3.11.9 and 3.14.8 |
+
+CI includes successful symlink/hard-link protection checks, uses hosted Python
+installations, and performs no application package install. Python 3.11 is now
+verified by these runs; it was unverified at earlier phase boundaries. CI runs
+unittest; the separate fresh-checkout demo verification was local on Windows.
+The run is associated with branch head `76b5f3bc1f38e4094de75b5fe6d00f8230e82061`;
+PR #4 shows checks for later documentation-only updates. Detailed commands and
+evidence are in [PLAN.md](PLAN.md).
 
 ## Known limits
 

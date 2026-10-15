@@ -380,6 +380,75 @@ Phase 3. No dashboard, database, integration, packaging framework, tag, or
 published release was added. Documentation writing used the HumanWriting
 skill to keep claims specific and contribution disclosure accurate.
 
-Fresh-checkout verification and CI execution are pending at this documentation
-checkpoint; do not infer passing results from the workflow definition. Record
-observed commands, environments, test totals/skips, and run URLs before handoff.
+### Fresh-checkout results
+
+Codex cloned `phase-4-delivery` from GitHub into a new temporary directory using
+`git clone --branch phase-4-delivery https://github.com/rujiraji/LoginWatch.git LoginWatch-demo`.
+The clone was clean at `76b5f3bc1f38e4094de75b5fe6d00f8230e82061`.
+A separate `python -m venv --without-pip` environment used Python 3.14.6 on
+Windows. `importlib.metadata.distributions()` returned an empty list; no
+third-party packages were installed. The commands below used that environment's
+Python executable from the clone root, shown as `python` for readability.
+
+| Command | Observed result |
+| --- | --- |
+| `python --version` | Python 3.14.6 |
+| `python -m unittest discover -s tests` | `Ran 138 tests`; `OK (skipped=6)`, exit 0; local Windows symlink privilege unavailable |
+| `python loginwatch.py samples/sample.log` | Exit 0; 9 events, 4 successes, 5 failures, 3 IPs, 5 usernames, 2 blank lines, 4 skipped lines, zero findings |
+| `python loginwatch.py samples/normal.log` | Exit 0; 8 events, 6 successes, 2 failures, 3 IPs, 3 usernames, no blank/skipped lines, zero findings |
+| `python loginwatch.py samples/suspicious.log` | Exit 0; 14 events, 3 successes, 11 failures, 3 IPs, 7 usernames, no blank/skipped lines, five expected findings |
+| `python loginwatch.py samples/custom.log` | Exit 0; 5 events, 1 success, 4 failures, 2 IPs, 3 usernames, no blank/skipped lines, zero findings |
+| `python loginwatch.py samples/custom.log --config samples/custom-config.json --json custom-report.json` | Exit 0; same summary, three expected findings and full report |
+| `python loginwatch.py samples/suspicious.log --json suspicious-report.json` | Exit 0; same summary/five findings and full report |
+| `python loginwatch.py --help` | Exit 0; positional input, `--config`, and `--json` help |
+| `python scripts/verify_demo.py` | Exit 0; all seven demo/help commands and two repeat exports passed |
+| `git status --porcelain=v1` in the clone after verification | Empty; only ignored caches/demo reports were generated |
+| `git diff --check` | Passed |
+
+The verifier checked every summary count, ordered rule/ID/trigger, actual
+threshold, full evidence membership/raw record, and UTC metadata against
+fixed expectations from `samples/README.md`. Both exports repeated with
+identical bytes. Sources/configuration stayed unchanged and no temporary export
+files remained. The two reports created by the literal documented commands in
+the clone were also checked against the verifier's independent expectations.
+Local Markdown target checks found no missing relative file links.
+
+### Observed GitHub Actions results
+
+[CI run 38804423752](https://github.com/rujiraji/LoginWatch/actions/runs/38804423752)
+for PR #4, associated with branch head
+`76b5f3bc1f38e4094de75b5fe6d00f8230e82061`, completed successfully. Codex read
+the job results and logs via the authenticated terminal's `gh` CLI:
+
+| Matrix job | Reported interpreter | Unittest result | Skips |
+| --- | --- | --- | --- |
+| ubuntu-latest / Python 3.11 | 3.11.17 | 138 tests, OK | 0 |
+| ubuntu-latest / Python 3.14 | 3.14.8 | 138 tests, OK | 0 |
+| windows-latest / Python 3.11 | 3.11.9 | 138 tests, OK | 0 |
+| windows-latest / Python 3.14 | 3.14.8 | 138 tests, OK | 0 |
+
+The exact CI command was `python -m unittest discover -s tests -v`, preceded
+by `python --version`. No application package installation step was used.
+Both hosted platforms permitted link creation; symlink/hard-link tests passed.
+Python 3.11 is now verified in these observed CI environments. Earlier
+references to it being unverified describe the evidence available at those
+phase boundaries. The local Windows six-skip result remains a separate host
+limitation, not a skipped CI check. Subsequent documentation-only commits can
+produce additional runs; consult PR #4 for checks on its latest head.
+
+### Review boundary and remaining limits
+
+PR #4 prepares a reviewable delivery candidate. Phase 4 is **Implemented —
+awaiting review**. Only the owner may accept or merge it. No tag, GitHub release,
+or final acceptance was created or claimed by Codex.
+
+Runtime modules, existing tests, and fixtures remain unchanged from the
+accepted Phase 3 baseline, confirmed with `git diff --name-only main --` for
+those paths. Large-log performance is unverified; memory usage and verbose
+evidence output are unchanged. The input grammar is narrow and rules are
+investigation heuristics. Reports retain usernames/raw text, IDs depend on
+source lines, and atomic export does not coordinate concurrent filesystem
+changes or guarantee directory-entry crash durability. Fresh-checkout demos
+were exercised locally on Windows 3.14.6; CI ran the unittest suite, not the
+separate demo verifier. Independent reviews supplied by the owner remain
+distinct from the Codex and CI results above.
