@@ -10,7 +10,8 @@ owner-reported independent review of commit
 `4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2. The CLI parses the
 documented SSH password-login format, prints the
 activity summary, and explains findings from three detection rules. Phase 3
-configuration and JSON export are **Implemented — awaiting review**.
+configuration and JSON export are **Accepted**, following owner-reported
+independent review of commit `16751333a60bec6f93ec6568a46ecefb08d63966` in PR #3.
 See [docs/PLAN.md](docs/PLAN.md) for phase status.
 
 ## Purpose
@@ -202,12 +203,13 @@ The supported format requires a year, timezone, host,
 timestamps and public-key authentication are skipped. Files must be UTF-8;
 invalid encoding is an error. Events are held in memory, so very large logs
 are not a streaming workflow. Python 3.11 is the minimum target; verification
-for Phase 3 was performed by Codex on Python 3.14.6 on Windows. Python 3.11 is
-not installed here, and Phase 3 on Linux and large-log performance remain
-unverified. The independent Linux/Python 3.12.14 review below applies to Phase 2.
-Creating symlinks is unavailable in this Windows session, so six symlink test
-cases are skipped; hard-link collision tests passed. Symlink protections need
-verification on a host that permits creating them. Permission, disk-full, and
+for Phase 3 was performed by Codex on Python 3.14.6 on Windows and independently
+on Python 3.12.14 on Linux. The independent Linux run passed all 138 tests
+without skips, including symlink and hard-link protection. Python 3.11 and
+large-log performance remain unverified. Creating symlinks is unavailable in
+this Windows session, so six symlink cases are still skipped locally;
+hard-link tests pass here. This local limitation does not apply to the
+independent Linux verification recorded below. Permission, disk-full, and
 replacement failures are simulated with mocks alongside real path/error tests.
 
 No live monitoring, blocking, threat-intelligence lookup, or account
@@ -295,5 +297,22 @@ Phase 3 verification by Codex on 2026-10-15, Windows, Python 3.14.6:
 - `py --list-paths` lists only Python 3.14 installations; `py -3.11 --version` exits 1 because no 3.11 runtime is installed. No runtime was installed for this task.
 - `git diff --check`: passed.
 
-Phase 3 is Implemented — awaiting review. Stop for independent review; only
-the owner may accept and merge this phase. Do not begin Phase 4.
+Independent Phase 3 review reported by the owner (not checks run by Codex):
+
+- Reviewed commit: `16751333a60bec6f93ec6568a46ecefb08d63966`, PR #3.
+- Linux, Python 3.12.14: all 138 tests passed without skips, including symlink and hard-link protection tests.
+- All seven documented demo/help commands passed.
+- Both JSON reports matched independently checked summaries, rules, thresholds, and supporting source lines; repeated exports produced identical bytes.
+- Source files remained unchanged and no temporary export files remained.
+- No blocking issues were found; the owner accepted Phase 3. Python 3.11 and large-log performance remain unverified.
+
+Codex Phase 3 acceptance-handoff checks on 2026-10-15, Windows, Python 3.14.6:
+
+- Verified the actual repository root and `origin` URL. Before documentation changes, the working tree was clean on `phase-3-reports`, and both `HEAD` and the remote branch matched the reviewed commit exactly.
+- `python -m unittest discover -s tests`: `Ran 138 tests`; `OK (skipped=6)`, exit 0. Local symlink creation remains unavailable.
+- `python loginwatch.py samples/sample.log`: exit 0; documented summary counts and zero findings.
+- `git diff --check`: passed.
+
+PR #3 is ready for the owner to merge. Phase 4 has been assigned conditionally
+on that merge; stop here while PR #3 is unmerged. No tags or GitHub releases
+have been created by Codex.

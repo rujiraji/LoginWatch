@@ -9,7 +9,7 @@ Codex: implementation, tests, documentation, and verification evidence.
 | --- | --- |
 | 1. Parser and activity summary | Accepted |
 | 2. Detection and evidence | Accepted |
-| 3. Configuration and JSON reports | Implemented — awaiting review |
+| 3. Configuration and JSON reports | Accepted |
 | 4. Release and portfolio delivery | Planned |
 
 Use Planned, Ready to implement, In progress, Implemented — awaiting review, or Accepted. Codex records implementation and checks; owner review determines acceptance.
@@ -66,6 +66,9 @@ Acceptance:
 - Demo explains why each finding triggers and shows a quiet normal case.
 - Release notes state verified functionality, test environment, and limitations.
 - Résumé wording accurately represents owner work and AI assistance, with no invented impact numbers.
+- README is a concise entry point; detailed verification history stays in PLAN, with a reproducible walkthrough and proposed release notes in separate documents.
+- Minimal GitHub Actions CI runs unittest on Python 3.11 and 3.14 on Ubuntu and Windows; only observed outcomes and platform skips are reported.
+- Fresh-checkout setup, demos, and JSON reproducibility checks pass without third-party runtime packages. Do not create tags or publish a GitHub release yet.
 
 ## Phase handoff
 
@@ -76,10 +79,15 @@ After each phase, Codex reports changed components, commands executed, results, 
 Phase 1 is Accepted and was merged by the owner via PR #1 at commit `357ea3e`.
 Phase 2 is Accepted following independent review of commit
 `4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2, merged by the owner at
-`f179620ddd0adefde9432051b362f46633db326e`. Phase 3 configuration and JSON
-reports are Implemented — awaiting review on `phase-3-reports`. Commit, push,
-and open a PR into `main` with the authenticated terminal's GitHub CLI, then
-stop for independent review. Do not merge PRs or begin Phase 4 as Codex.
+`f179620ddd0adefde9432051b362f46633db326e`. Phase 3 is Accepted following
+independent review of commit `16751333a60bec6f93ec6568a46ecefb08d63966` in PR #3.
+Finalize acceptance documentation on `phase-3-reports`, commit, and push.
+The owner performs the merge; stop while PR #3 is unmerged. Phase 4 portfolio
+delivery is assigned conditionally on that merge: read repository instructions
+and project documents, update `main` with a fast-forward-only pull, and create
+`phase-4-delivery` (inspect an existing branch before reuse). Keep runtime scope
+unchanged. Do not merge PRs, create tags, publish a release, or claim final
+acceptance as Codex.
 
 ## Phase 1 implementation and verification
 
@@ -291,19 +299,59 @@ test incorrectly assumed a decoder recursion limit common to all Python
 versions; it now accepts either documented decoding or root-validation errors,
 with a separate check for converting decoder recursion errors cleanly.
 
-Limitations: six symlink test cases are skipped because this Windows session
-cannot create symlinks (confirmed `WinError 1314`, required privilege absent).
-Hard-link collision cases passed; symlink behavior needs review on a host
-that permits creation. Python 3.11 is unavailable, Phase 3 on Linux is untested
-here, and large-log performance remains unverified. Earlier independent Linux
-review applies to Phase 2, not Phase 3. Events, findings, and JSON serialization
-remain in memory. Disk-full, permission, and replacement failures include mock
+Local verification limitations: six symlink cases were skipped because this
+Windows session cannot create symlinks (confirmed `WinError 1314`, required
+privilege absent).
+Hard-link collision cases passed locally. The later independent Phase 3
+review below passed all 138 tests without skips on Linux/Python 3.12.14,
+including symlink and hard-link protection. Python 3.11 is unavailable here
+and remains unverified, as does large-log performance. Events, findings, and
+JSON serialization remain in memory. Disk-full, permission, and replacement failures include mock
 tests alongside real missing-path, directory, encoding, and hard-link cases.
 Atomic replacement does not coordinate with concurrent filesystem changes or
 guarantee directory-entry crash durability. Reports retain usernames and raw
 log text; IDs remain scoped to source records/line numbers. No dashboard,
 database, integrations, or Phase 4 work was added.
 
-Phase 3 is Implemented — awaiting review. Push `phase-3-reports`, open the PR
-using the authenticated terminal's `gh` CLI, and stop for independent review.
-The owner decides acceptance and merge; Codex does not merge or begin Phase 4.
+At implementation handoff, Phase 3 was Implemented — awaiting review. Codex
+pushed `phase-3-reports` and opened PR #3 using the authenticated terminal's
+`gh` CLI, then stopped. Owner acceptance and the subsequent checks follow;
+Codex has not merged it or begun Phase 4.
+
+## Phase 3 acceptance and independent review
+
+The owner accepted Phase 3 based on independent review of commit
+`16751333a60bec6f93ec6568a46ecefb08d63966`, PR #3. These results were reported
+by the owner, separately from checks run by Codex:
+
+- Linux, Python 3.12.14: all 138 tests passed with no skips.
+- Symlink and hard-link protection tests passed.
+- All seven documented demo/help commands passed.
+- Both JSON reports matched independently checked summaries, rules, thresholds, and supporting source lines.
+- Repeated exports produced identical bytes.
+- Source files remained unchanged and no temporary export files remained.
+- No blocking issues were found. Python 3.11 and large-log performance remain unverified.
+
+## Phase 3 acceptance-handoff checks by Codex
+
+On 2026-10-15, Codex verified the current repository root and `origin` URL
+for `https://github.com/rujiraji/LoginWatch`. Before documentation edits,
+the working tree was clean on `phase-3-reports`; `HEAD` and
+`origin/phase-3-reports` pointed to the reviewed commit, and
+`git diff 16751333a60bec6f93ec6568a46ecefb08d63966 --` was empty.
+No implementation or unrelated work was changed.
+
+Checks run by Codex on Windows, Python 3.14.6:
+
+| Exact command | Result |
+| --- | --- |
+| `python --version` | `Python 3.14.6`, exit 0 |
+| `python -m unittest discover -s tests` | `Ran 138 tests`; `OK (skipped=6)`, exit 0; symlink creation remains unavailable in this Windows session |
+| `python loginwatch.py samples/sample.log` | Exit 0; 9 events, 4 successes, 5 failures, 3 IPs, 5 usernames, 2 blank lines, 4 skipped lines, zero findings |
+| `git diff --check` | Passed |
+| `git fetch origin` | Completed successfully; `origin/main` remained at Phase 2 merge commit `f179620ddd0adefde9432051b362f46633db326e` |
+
+The authenticated terminal's `gh` CLI confirmed
+`https://github.com/rujiraji/LoginWatch/pull/3` was OPEN with no merge timestamp.
+PR #3 is ready for the owner's merge; Codex stops here without merging it,
+beginning Phase 4, creating tags, or publishing a GitHub release.
