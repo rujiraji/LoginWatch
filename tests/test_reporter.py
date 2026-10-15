@@ -3,8 +3,9 @@ from pathlib import Path
 import unittest
 
 from models import ActivitySummary
+from analyzer import analyze
 from parser import parse_file, parse_lines
-from reporter import format_summary, summarize
+from reporter import format_findings, format_summary, summarize
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,3 +50,20 @@ class ReporterTests(unittest.TestCase):
             prefix + "Failed password for ignored from 203.0.113.10 port 0 ssh2",
         ])
         self.assertEqual(summarize(parsed), ActivitySummary(2, 1, 1, 1, 2, 0, 1))
+
+    def test_no_findings_console_text(self):
+        self.assertEqual(format_findings([]), "Findings: 0\n"
+                         "No suspicious patterns detected by the three default rules.")
+
+    def test_findings_console_includes_utc_metadata_reason_and_raw_evidence(self):
+        parsed = parse_file(ROOT / "samples" / "suspicious.log")
+        finding = analyze(parsed.events)[0]
+        rendered = format_findings([finding])
+        self.assertIn("Findings: 1\n", rendered)
+        self.assertIn("Trigger: 2026-10-11T10:05:00Z", rendered)
+        self.assertIn("IP: 192.0.2.10; usernames: alice", rendered)
+        self.assertIn("5 failed password logins from 192.0.2.10 occurred within 300 seconds", rendered)
+        self.assertIn("Evidence: 5 events, 2026-10-11T10:00:00Z to 2026-10-11T10:05:00Z", rendered)
+        for record in parsed.events[:5]:
+            self.assertIn(f"  line {record.line_number}: {record.raw_line}", rendered)
+        self.assertNotIn("  line 6:", rendered)

@@ -1,6 +1,9 @@
-"""Summarize parsed events and format their activity counts for the console."""
+"""Format activity counts and evidence-backed findings for the console."""
 
-from models import ActivitySummary, ParseResult
+from datetime import datetime
+from typing import Iterable
+
+from models import ActivitySummary, Finding, ParseResult
 
 
 def summarize(parsed: ParseResult) -> ActivitySummary:
@@ -29,3 +32,29 @@ def format_summary(summary: ActivitySummary) -> str:
             f"Skipped nonblank lines: {summary.skipped_lines}",
         )
     )
+
+
+def _utc_text(timestamp: datetime) -> str:
+    return timestamp.isoformat().replace("+00:00", "Z")
+
+
+def format_findings(findings: Iterable[Finding]) -> str:
+    findings = tuple(findings)
+    lines = [f"Findings: {len(findings)}"]
+    if not findings:
+        lines.append("No suspicious patterns detected by the three default rules.")
+    for finding in findings:
+        lines.extend((
+            "",
+            f"[{finding.id}] {finding.rule_id}",
+            f"Trigger: {_utc_text(finding.trigger_timestamp)}",
+            f"IP: {finding.ip}; usernames: {', '.join(finding.usernames)}",
+            finding.explanation,
+            f"Evidence: {finding.event_count} events, "
+            f"{_utc_text(finding.evidence_start)} to {_utc_text(finding.evidence_end)}",
+            "Supporting source lines:",
+        ))
+        lines.extend(
+            f"  line {event.line_number}: {event.raw_line}" for event in finding.evidence
+        )
+    return "\n".join(lines)

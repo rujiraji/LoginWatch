@@ -1,16 +1,18 @@
-"""Command-line entry point for LoginWatch's Phase 1 activity summary."""
+"""Coordinate input parsing, activity summary, and Phase 2 detection."""
 
 import argparse
 from pathlib import Path
 import sys
 
+from analyzer import analyze
 from parser import parse_file
-from reporter import format_summary, summarize
+from reporter import format_findings, format_summary, summarize
 
 
 def main(argv: list[str] | None = None) -> int:
     cli = argparse.ArgumentParser(
-        description="Summarize SSH password-login activity in a UTF-8 log file."
+        description="Summarize SSH password-login activity and detect suspicious "
+        "patterns in a UTF-8 log file."
     )
     cli.add_argument("path", type=Path, help="path to the input log file")
     args = cli.parse_args(argv)
@@ -30,6 +32,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
     print(format_summary(summarize(parsed)))
+    print()
+    print(format_findings(analyze(parsed.events)))
     return 0
 
 

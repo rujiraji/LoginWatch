@@ -1,4 +1,4 @@
-"""Data passed between the parser and activity reporter."""
+"""Immutable data passed between parsing, detection, and reporting."""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -31,3 +31,22 @@ class ActivitySummary:
     unique_usernames: int
     ignored_blank_lines: int
     skipped_lines: int
+
+
+RuleID = Literal["repeated_failures", "success_after_failures", "multiple_accounts"]
+
+
+@dataclass(frozen=True, slots=True)
+class Finding:
+    id: str
+    rule_id: RuleID
+    ip: str
+    usernames: tuple[str, ...]
+    trigger_timestamp: datetime
+    evidence_start: datetime
+    evidence_end: datetime
+    event_count: int
+    threshold_count: int
+    window_seconds: int
+    explanation: str
+    evidence: tuple[LoginEvent, ...]
