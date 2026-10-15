@@ -5,7 +5,7 @@ and positional-path CLI are Accepted following owner-reported independent
 review of commit `aaa183c0adfe37a734a5431bf8b1db51b930ce22`. Detection and console
 evidence (Phase 2) are Accepted following owner-reported independent review of
 commit `4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2. Configuration/JSON export
-(Phase 3) are planned, not implemented.
+(Phase 3) are Implemented — awaiting review.
 
 ## Goal and user workflow
 
@@ -17,7 +17,8 @@ Planned first release: Python CLI, one documented password-login format, IPv4
 and IPv6, three detection rules, configurable thresholds, console output, JSON
 export, synthetic fixtures, meaningful tests, and a repeatable demo. Phase 1
 delivers parsing and console summary; Phase 2 adds default detection rules and
-console evidence.
+console evidence. Phase 3 adds validated effective configuration and JSON
+export; Phase 4 release/portfolio delivery remains planned.
 
 Out of scope: dashboard, database, email or chat alerts, real-time collection, automatic blocking, external intelligence services, arbitrary log formats, and machine learning. PT/PERSTAT automation is a separate project.
 
@@ -63,7 +64,9 @@ The Phase 1 fixture `samples/sample.log` has 9 parsed events, 4 successes,
 Evaluate events in UTC timestamp order, using original line number to break ties. Window endpoints are inclusive. Interleaved unrelated events must not reset a window. Findings describe suspicious activity, not confirmed attacks.
 
 Analyze a sorted view; never mutate parsed events or their source ordering.
-The Phase 2 CLI uses the fixed defaults below; it does not load configuration.
+Phase 2 introduced the defaults below. Phase 3 passes immutable validated
+effective configuration into the analyzer; omitted configuration uses these
+same defaults and preserves the established semantics.
 
 | Rule ID | Grouping | Default trigger |
 | --- | --- | --- |
@@ -101,9 +104,9 @@ usernames for `multiple_accounts`.
 
 Evidence membership:
 
-- Repeated failures: all IP-matching failures in the inclusive 300-second window, including the triggering failure.
-- Multiple accounts: all IP-matching failures in the inclusive 600-second window, including repeated usernames and the trigger, rather than one representative per account.
-- Success after failures: all preceding same-IP/account failures in the inclusive 600-second window, followed by the triggering success. Other successes and failures after that success in sorted order are excluded.
+- Repeated failures: all IP-matching failures in the inclusive configured window (default 300 seconds), including the triggering failure.
+- Multiple accounts: all IP-matching failures in the inclusive configured window (default 600 seconds), including repeated usernames and the trigger, rather than one representative per account.
+- Success after failures: all preceding same-IP/account failures in the inclusive configured window (default 600 seconds), followed by the triggering success. Other successes and failures after that success in sorted order are excluded.
 
 `event_count` is the number of supporting records, including the success for
 success-after-failures. Evidence records retain timestamp/source-line ordering.
@@ -136,6 +139,60 @@ Optional JSON configuration uses these integer fields:
 
 Omitted fields use defaults. Require positive integers; reject booleans, unknown fields, invalid JSON, and non-object configuration with clear errors. Record effective configuration in exported reports.
 
+Phase 3 implementation contract (defined before implementation; verification
+and platform limitations are recorded in PLAN):
+
+- `--config PATH` reads strict UTF-8 JSON without modifying it. An omitted configuration or `{}` uses all defaults; a partial object overrides only named fields.
+- All six values must have integer type (not booleans), in `1..2147483647` inclusive. This common positive 32-bit bound keeps windows safely representable by Python `timedelta` and makes the contract portable; counts use the same bound. Larger integers are rejected before analysis, not used in timestamp arithmetic.
+- Reject floats, strings, nulls, arrays, non-object roots, duplicate keys (including nested objects), unknown keys, malformed JSON, and non-finite JSON constants. Read/decoding/validation failures return concise errors without routine tracebacks. Excessively nested JSON is rejected clearly as well.
+- Pass a frozen effective configuration to the analyzer. The default values preserve Phase 2 ordering, evidence, IDs, and episode semantics. Every finding records and explains its actual count/window thresholds. Console wording refers to the three rules, including when configured values differ from defaults.
+
+### JSON schema version 1.0
+
+`--json PATH` retains console reporting and writes this exact structure. No
+generated time, absolute source path, host details, or other environment
+metadata is added. No fields are optional in schema 1.0.
+
+| Object | Fields and JSON types |
+| --- | --- |
+| Root | `schema_version`: string `"1.0"`; `source_filename`: source log basename string; `summary`: object; `effective_configuration`: object; `findings`: array |
+| Summary | `parsed_events`, `successful_logins`, `failed_logins`, `unique_ips`, `unique_usernames`, `ignored_blank_lines`, `skipped_lines`: nonnegative integers |
+| Effective configuration | All six fields from the configuration object above, with effective integer values including defaults |
+| Finding | `id`, `rule_id`, `ip`: strings; `usernames`: sorted unique string array; `trigger_timestamp`, `evidence_start`, `evidence_end`: UTC timestamp strings; `event_count`, `threshold_count`, `window_seconds`: positive integers; `explanation`: string; `evidence`: array of event objects |
+| Supporting event | `timestamp`: UTC timestamp string; `ip`, `username`: strings; `result`: `"success"` or `"failure"`; `line_number`: positive integer; `raw_line`: original event text string excluding its line ending |
+
+Timestamp metadata uses `YYYY-MM-DDTHH:MM:SSZ`, or six fractional digits
+before `Z` when microseconds are nonzero. Original timestamp spellings remain
+in `raw_line`. Findings use the established trigger/rule/group/source-line
+order; evidence keeps timestamp/source-line order. Empty/no-finding reports
+use `findings: []` and the normal summary counts.
+
+JSON bytes are UTF-8 without BOM, with literal Unicode, recursively sorted
+object keys, two-space indentation, LF newlines, and exactly one trailing LF.
+Equivalent input records, source basename, and effective configuration produce
+identical bytes. Destination path and working-directory spelling do not affect
+the report. Every finding field and every supporting record is preserved;
+reports retain usernames and raw log text and may contain sensitive data.
+
+### Atomic export and path protection
+
+The destination directory must already exist. On success, an existing report
+entry is replaced. Write a temporary file in that directory, flush and fsync
+it, close it, then atomically replace the destination. Clean up the temporary
+file on failures; preserve an existing report until successful replacement.
+This is atomic file replacement, not a guarantee of crash durability for the
+directory entry or coordination with concurrent filesystem changes.
+
+Reject a destination referring to the input log or configuration, using
+resolved-path comparisons and filesystem identity checks for existing files.
+This includes relative paths, symbolic links, parent-directory links, and hard
+links where supported. Check before writing and again before replacement.
+For an allowed destination symlink to an unrelated report, replace the symlink
+entry itself, leaving its old target untouched. Input and configuration files
+are never written. Invalid paths and write/replace failures produce clear
+errors and nonzero status; no console report is printed on configuration or
+JSON export failure.
+
 ## CLI and report contract
 
 Phase 1: `python loginwatch.py PATH` displays the summary. Phase 2 adds findings. Phase 3 introduces `--config PATH` and `--json PATH`.
@@ -148,20 +205,21 @@ traceback or partial summary. Argument errors exit 2. UTF-8 decoding is strict.
 
 Phase 2 preserves these summary and error behaviors and appends a findings
 section after a blank line. The section always reports `Findings: N`. Zero
-findings are followed by `No suspicious patterns detected by the three default
-rules.` Each finding prints its ID/rule, UTC trigger, IP/usernames, reason and
+findings in Phase 3 are followed by `No suspicious patterns detected by the
+three rules.` This updates Phase 2's reference to defaults, since rules can
+now be configured. Each finding prints its ID/rule, UTC trigger, IP/usernames, reason and
 threshold, evidence count/time range, and all original supporting records
 prefixed by source line number. UTC metadata uses ISO timestamps ending in
 `Z`; raw evidence retains its original timestamp spelling. All input is read
 successfully before any summary or findings are printed. Findings still exit 0.
 
-Planned Phase 3 JSON report contains schema_version, source filename, summary,
-effective configuration, and findings. Serialize UTC timestamps consistently
-with Z, order findings by trigger time then rule/group, and avoid generated
-timestamps that prevent reproducible fixture comparisons. Console output can
-abbreviate evidence; JSON preserves full supporting records. Exported reports
-can contain sensitive log data; document this behavior in the README when
-export is implemented.
+Phase 3 implements `--config` and `--json` under the contracts above.
+Configuration, input, and export failures exit 1 with concise stderr errors
+and no routine traceback. CLI argument errors still exit 2. All JSON export
+work completes before console reporting; successful findings still exit 0.
+The console and JSON both preserve complete supporting records. Exported
+reports retain usernames and raw source text; the README documents that
+sensitivity and the replacement policy.
 
 ## Quality and delivery
 

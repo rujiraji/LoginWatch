@@ -53,7 +53,7 @@ class ReporterTests(unittest.TestCase):
 
     def test_no_findings_console_text(self):
         self.assertEqual(format_findings([]), "Findings: 0\n"
-                         "No suspicious patterns detected by the three default rules.")
+                         "No suspicious patterns detected by the three rules.")
 
     def test_findings_console_includes_utc_metadata_reason_and_raw_evidence(self):
         parsed = parse_file(ROOT / "samples" / "suspicious.log")

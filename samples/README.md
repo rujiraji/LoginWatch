@@ -67,3 +67,42 @@ correlation. Console explanations identify the threshold, UTC trigger and
 evidence range, and every supporting source line.
 
 Run: `python loginwatch.py samples/suspicious.log`.
+
+## Custom-threshold demo (Phase 3)
+
+`custom.log` contains five synthetic events: four failures (lines 1, 2, 4, 5),
+one success (line 3), two IPs, three usernames, and no blank/skipped lines.
+With defaults it has **zero findings**. The two failures on each IP are below
+all default count thresholds.
+
+`custom-config.json` sets all three counts to 2, with windows of 30 seconds
+for repeated failures and 60 seconds for the other two rules. With this
+configuration exactly **three findings** are expected, in this order:
+
+| Rule | IP | UTC trigger / source line | Evidence lines | Actual count/window threshold |
+| --- | --- | --- | --- | --- |
+| repeated_failures | 192.0.2.10 | 10:00:30 / 2 | 1, 2 | 2 failures / 30 seconds |
+| success_after_failures | 192.0.2.10 | 10:01:00 / 3 | 1, 2, 3 | 2 failures / preceding 60 seconds |
+| multiple_accounts | 198.51.100.20 | 10:11:00 / 5 | 4, 5 | 2 distinct usernames / 60 seconds |
+
+All dates are 2026-10-11. Each first observation is exactly on the relevant
+window boundary. The later IP's failures are 60 seconds apart, so its
+30-second repeated-failure rule stays quiet. Only one username appears in the
+earlier IP's failures, so its multiple-account rule stays quiet. The successful
+event is included in success-after-failures evidence but not its threshold
+failure count. These expectations are specified from the fixture, not produced
+by the analyzer.
+
+Run from the repository root:
+
+```bash
+python loginwatch.py samples/custom.log
+python loginwatch.py samples/custom.log --config samples/custom-config.json --json custom-report.json
+```
+
+The second command retains the console report and atomically replaces
+`custom-report.json` on success. Its schema 1.0 report has `source_filename`
+`custom.log`, all seven summary counts above, all six effective configuration
+values from the file, and the three complete ordered findings/evidence sets
+in the table. Repeating the command produces identical UTF-8 bytes. Generated
+demo reports are ignored by Git; reports retain usernames and raw log text.

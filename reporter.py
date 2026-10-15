@@ -1,8 +1,12 @@
-"""Format activity counts and evidence-backed findings for the console."""
+"""Format activity counts and evidence-backed findings as console text and JSON."""
 
-from datetime import datetime
+from dataclasses import asdict
+from datetime import datetime, timezone
+import json
+from pathlib import Path
 from typing import Iterable
 
+from configuration import DetectionConfig
 from models import ActivitySummary, Finding, ParseResult
 
 
@@ -35,14 +39,14 @@ def format_summary(summary: ActivitySummary) -> str:
 
 
 def _utc_text(timestamp: datetime) -> str:
-    return timestamp.isoformat().replace("+00:00", "Z")
+    return timestamp.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def format_findings(findings: Iterable[Finding]) -> str:
     findings = tuple(findings)
     lines = [f"Findings: {len(findings)}"]
     if not findings:
-        lines.append("No suspicious patterns detected by the three default rules.")
+        lines.append("No suspicious patterns detected by the three rules.")
     for finding in findings:
         lines.extend((
             "",
@@ -58,3 +62,29 @@ def format_findings(findings: Iterable[Finding]) -> str:
             f"  line {event.line_number}: {event.raw_line}" for event in finding.evidence
         )
     return "\n".join(lines)
+
+
+def _json_value(value: object) -> str:
+    if isinstance(value, datetime):
+        return _utc_text(value)
+    raise TypeError(f"unsupported JSON value type: {type(value).__name__}")
+
+
+def format_json_report(
+    source: str | Path,
+    summary: ActivitySummary,
+    config: DetectionConfig,
+    findings: Iterable[Finding],
+) -> str:
+    """Serialize schema 1.0; findings arrive in the analyzer's deterministic order."""
+    report = {
+        "schema_version": "1.0",
+        "source_filename": Path(source).name,
+        "summary": asdict(summary),
+        "effective_configuration": asdict(config),
+        "findings": [asdict(finding) for finding in findings],
+    }
+    return json.dumps(
+        report, default=_json_value, ensure_ascii=False, allow_nan=False,
+        indent=2, sort_keys=True,
+    ) + "\n"

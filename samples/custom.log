@@ -1,0 +1,5 @@
+2026-10-11T10:00:00Z server sshd[4001]: Failed password for alice from 192.0.2.10 port 52001 ssh2
+2026-10-11T10:00:30Z server sshd[4002]: Failed password for alice from 192.0.2.10 port 52002 ssh2
+2026-10-11T10:01:00Z server sshd[4003]: Accepted password for alice from 192.0.2.10 port 52003 ssh2
+2026-10-11T10:10:00Z server sshd[4004]: Failed password for bob from 198.51.100.20 port 52004 ssh2
+2026-10-11T10:11:00Z server sshd[4005]: Failed password for carol from 198.51.100.20 port 52005 ssh2
