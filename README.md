@@ -9,14 +9,16 @@ Phase 1 is **Accepted**, following owner-reported independent review of commit
 owner-reported independent review of commit
 `4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2. The CLI parses the
 documented SSH password-login format, prints the
-activity summary, and explains findings from three default detection rules.
-Configuration and JSON export remain planned. See [docs/PLAN.md](docs/PLAN.md)
-for phase status.
+activity summary, and explains findings from three detection rules. Phase 3
+configuration and JSON export are **Accepted**, following owner-reported
+independent review of commit `16751333a60bec6f93ec6568a46ecefb08d63966` in PR #3.
+See [docs/PLAN.md](docs/PLAN.md) for phase status.
 
 ## Purpose
 
 Turn a log file into an accurate activity summary and an evidence-backed
-console report. Findings are investigation signals, not proof of compromise.
+console report and optional reproducible JSON export. Findings are
+investigation signals, not proof of compromise.
 This portfolio project records the owner's requirements, design
 decisions, and phase review, alongside Codex-assisted implementation and tests.
 
@@ -24,18 +26,21 @@ decisions, and phase review, alongside Codex-assisted implementation and tests.
 
 Log file → parser → events and line counts → analyzer → findings → reporter
 → console. The CLI coordinates parsing, summary calculation, detection, and
-formatting; it completes input reading before printing any report.
+formatting. Configuration is validated first; reading, analysis, and any JSON
+export complete before console reporting.
 
-- `loginwatch.py`: accepts an input path, calls parsing and reporting, and returns an exit status.
+- `loginwatch.py`: coordinates the input path, optional configuration/export, parsing, analysis, reporting, and exit status.
+- `configuration.py`: loads strict UTF-8 JSON and validates the frozen `DetectionConfig`, filling omitted fields with defaults.
 - `models.py`: immutable `LoginEvent`, `ParseResult`, `ActivitySummary`, and `Finding` data models.
 - `parser.py`: reads UTF-8 without changing the file; returns validated events in source order, blank-line counts, and skipped-line counts. Events retain UTC timestamps, normalized IPs, usernames, results, line numbers, and raw text.
-- `analyzer.py`: accepts parsed events, analyzes a view sorted by UTC timestamp and source line, and returns ordered findings with explanations, thresholds, and immutable evidence snapshots. It does not alter events or source ordering.
-- `reporter.py`: calculates the seven summary counts and formats the summary and findings, including each supporting source line and original event text.
-- `samples/`: synthetic parsing, normal, and suspicious fixtures with independent expected counts and findings.
-- `tests/`: standard-library parser, summary, detection, and CLI checks.
+- `analyzer.py`: accepts events and immutable effective configuration, analyzes a view sorted by UTC timestamp and source line, and returns ordered findings with actual thresholds and immutable evidence snapshots. It does not alter events or source ordering.
+- `reporter.py`: calculates summary counts and formats console text and schema 1.0 JSON with every finding field and complete supporting events.
+- `report_export.py`: checks source/configuration path collisions and writes UTF-8 using a temporary file and atomic replacement.
+- `samples/`: synthetic parsing, normal, suspicious, and custom-threshold fixtures with independent expected counts and findings.
+- `tests/`: standard-library parser, configuration, summary, detection, export, and CLI checks.
 
-Findings retain source log text and usernames in memory and display them on
-the console; handle the report with the same care as its input logs.
+Console and exported reports retain usernames and raw source log text;
+handle and share them with the same care as the input logs.
 
 ## Setup and usage
 
@@ -46,20 +51,18 @@ Run these commands from the repository directory:
 python loginwatch.py samples/sample.log
 python loginwatch.py samples/normal.log
 python loginwatch.py samples/suspicious.log
+python loginwatch.py samples/custom.log
+python loginwatch.py samples/custom.log --config samples/custom-config.json --json custom-report.json
+python loginwatch.py samples/suspicious.log --json suspicious-report.json
 python -m unittest discover -s tests
 python loginwatch.py --help
 ```
 
 The CLI exits 0 after a completed report, including empty files, skipped
-records, or findings. Input errors exit 1 with a concise error on stderr; invalid CLI usage
-exits 2. Missing paths, unreadable files, and invalid UTF-8 do not produce a
-partial summary.
-
-Phase 3 will add optional configuration and report export (unavailable now):
-
-```bash
-python loginwatch.py samples/sample.log --config config.json --json report.json
-```
+records, or findings. Input, configuration, and JSON output errors exit 1 with
+a concise error on stderr; invalid CLI usage exits 2. Read/validation/export
+failures do not print a partial console report. All commands use Python's
+standard library; no database, network service, or package install is required.
 
 ## Supported input
 
@@ -80,7 +83,7 @@ Ignored blank lines: 2
 Skipped nonblank lines: 4
 
 Findings: 0
-No suspicious patterns detected by the three default rules.
+No suspicious patterns detected by the three rules.
 ```
 
 The fixture has 15 lines: 9 supported events, 2 blank lines, and 4 malformed or
@@ -91,7 +94,7 @@ remain separate observations. Only parsed events contribute to unique counts.
 
 ## Detection and demos
 
-| Rule | Fixed Phase 2 trigger |
+| Rule | Default trigger (configurable in Phase 3) |
 | --- | --- |
 | repeated_failures | At least five failures from one IP within 300 seconds |
 | success_after_failures | A success preceded by at least five failures for the same IP and case-sensitive username within 600 seconds |
@@ -125,17 +128,89 @@ IPs, usernames, thresholds, explanations, and supporting source lines.
 For example, the first finding explains: `5 failed password logins from
 192.0.2.10 occurred within 300 seconds (threshold: 5 failures).`
 
+## Configuration and custom demo
+
+Use `--config PATH` to load a UTF-8 JSON object. Omitted fields use these defaults;
+an empty object is valid:
+
+```json
+{
+  "repeated_failures_count": 5,
+  "repeated_failures_window_seconds": 300,
+  "success_after_failures_count": 5,
+  "success_after_failures_window_seconds": 600,
+  "multiple_accounts_count": 5,
+  "multiple_accounts_window_seconds": 600
+}
+```
+
+All six fields must be integers in **1–2147483647**. This bound keeps time
+windows safely representable and portable; counts use the same bound.
+Booleans, floats, strings, nonpositive/out-of-range values, unknown fields,
+duplicate keys, non-object roots, malformed JSON, and non-finite constants are
+rejected. Invalid UTF-8 and unreadable configuration files produce clear errors.
+Files are read without modification. Findings explain the thresholds actually
+used; the original defaults preserve Phase 2 detection behavior.
+
+`samples/custom.log` has 5 events, 1 success, 4 failures, 2 IPs, 3 usernames,
+no blank/skipped lines, and zero findings under defaults.
+The documented command using `samples/custom-config.json` changes all counts
+to 2 and the windows to 30/60/60 seconds. It produces exactly three findings:
+
+| Rule | Trigger line | Evidence lines | Threshold count/window |
+| --- | --- | --- | --- |
+| repeated_failures | 2 | 1, 2 | 2 / 30 seconds |
+| success_after_failures | 3 | 1, 2, 3 | 2 / 60 seconds |
+| multiple_accounts | 5 | 4, 5 | 2 / 60 seconds |
+
+The same command writes `custom-report.json`; independent expected triggers
+and evidence are in [samples/README.md](samples/README.md).
+
+## JSON export and file safety
+
+`--json PATH` retains console output and writes schema version `1.0` with the
+source basename, all seven summary counts, all six effective configuration
+values, and ordered findings. Each finding retains every model field and all
+supporting events, including line numbers and raw text. See the exact schema
+in [docs/SPEC.md](docs/SPEC.md). Timestamp metadata is UTC with `Z`; original
+timestamp spellings remain in raw text.
+
+Equivalent runs produce identical UTF-8 bytes: sorted object keys, two-space
+indentation, LF newlines, one trailing LF, no BOM, and no generated timestamps
+or machine-specific metadata. Source basename and raw source text are part of
+the report; changing either can change bytes. The destination path is not
+embedded. The default suspicious export has five findings; the custom export
+has the three findings above. Both demo report filenames are ignored by Git.
+
+The destination directory must exist. Successful exports **replace existing
+reports** using a temporary file in the destination directory, flush/fsync,
+and atomic replacement. Write/sync/replace failures preserve the old report
+and remove temporary files. An allowed destination symlink to an unrelated
+report is replaced as an entry; its former target is left untouched.
+Exports cannot refer to the input log or configuration, including relative
+paths, symlinks, or hard links where supported. These checks run before
+writing and again before replacement. Source and configuration files are
+never written. Atomic replacement does not coordinate with concurrent changes
+to the filesystem or guarantee directory-entry crash durability.
+
+Exports retain usernames and raw log text and can expose sensitive data.
+
 ## Limitations
 
-Offline summaries and deterministic heuristic findings. Configuration and
-report export are unavailable. The supported format requires a year, timezone, host,
+Offline summaries, configurable deterministic findings, and JSON reports.
+The supported format requires a year, timezone, host,
 `sshd[PID]`, and the exact documented password message. Traditional syslog
 timestamps and public-key authentication are skipped. Files must be UTF-8;
 invalid encoding is an error. Events are held in memory, so very large logs
 are not a streaming workflow. Python 3.11 is the minimum target; verification
-for Phase 2 was performed by Codex on Python 3.14.6 on Windows and independently
-on Python 3.12.14 on Linux. Python 3.11 and large-log performance remain
-unverified. The independent review evidence is recorded separately below.
+for Phase 3 was performed by Codex on Python 3.14.6 on Windows and independently
+on Python 3.12.14 on Linux. The independent Linux run passed all 138 tests
+without skips, including symlink and hard-link protection. Python 3.11 and
+large-log performance remain unverified. Creating symlinks is unavailable in
+this Windows session, so six symlink cases are still skipped locally;
+hard-link tests pass here. This local limitation does not apply to the
+independent Linux verification recorded below. Permission, disk-full, and
+replacement failures are simulated with mocks alongside real path/error tests.
 
 No live monitoring, blocking, threat-intelligence lookup, or account
 remediation. A shared IP can represent multiple people, and missing logs can
@@ -187,7 +262,7 @@ fast-forward-only pull and inspection/fast-forward of the existing branch.
 Phase 2 verification by Codex on 2026-10-14, Windows, Python 3.14.6:
 
 - `python -m unittest discover -s tests`: 69 tests passed, exit 0.
-- `python loginwatch.py samples/sample.log`: exit 0; exact current output above, including zero findings.
+- `python loginwatch.py samples/sample.log`: exit 0; original summary counts and zero findings (Phase 3 later updates the no-findings wording).
 - `python loginwatch.py samples/normal.log`: exit 0; counts documented above, zero findings.
 - `python loginwatch.py samples/suspicious.log`: exit 0; counts and all five findings match the independent expectation table in samples/README.md.
 - `python loginwatch.py --help`: exit 0; describes the summary, detection, and UTF-8 input.
@@ -211,5 +286,33 @@ Codex Phase 2 acceptance-handoff checks on 2026-10-14, Windows, Python 3.14.6:
 - `python loginwatch.py --help`: exit 0.
 - `git diff --check`: passed.
 
-PR #2 is ready for the owner to merge. Phase 3 has been assigned conditionally
-on that merge; implementation stops here while PR #2 remains unmerged.
+The owner merged PR #2 at commit `f179620ddd0adefde9432051b362f46633db326e`.
+Phase 3 began from that merged baseline after a fast-forward-only pull.
+
+Phase 3 verification by Codex on 2026-10-15, Windows, Python 3.14.6:
+
+- `python -m unittest discover -s tests`: `Ran 138 tests`; `OK (skipped=6)` (symlink creation unavailable).
+- All eight commands in Setup and usage were run successfully; sample/normal/default-custom inputs have zero findings, suspicious input has five, and configured custom input has three, matching the independent fixture tables.
+- Both JSON export commands preserve console reporting. Tests compare deterministic bytes across separate processes and destination/source path spellings, validate schema/evidence/UTC fields, and check file preservation on failures.
+- `py --list-paths` lists only Python 3.14 installations; `py -3.11 --version` exits 1 because no 3.11 runtime is installed. No runtime was installed for this task.
+- `git diff --check`: passed.
+
+Independent Phase 3 review reported by the owner (not checks run by Codex):
+
+- Reviewed commit: `16751333a60bec6f93ec6568a46ecefb08d63966`, PR #3.
+- Linux, Python 3.12.14: all 138 tests passed without skips, including symlink and hard-link protection tests.
+- All seven documented demo/help commands passed.
+- Both JSON reports matched independently checked summaries, rules, thresholds, and supporting source lines; repeated exports produced identical bytes.
+- Source files remained unchanged and no temporary export files remained.
+- No blocking issues were found; the owner accepted Phase 3. Python 3.11 and large-log performance remain unverified.
+
+Codex Phase 3 acceptance-handoff checks on 2026-10-15, Windows, Python 3.14.6:
+
+- Verified the actual repository root and `origin` URL. Before documentation changes, the working tree was clean on `phase-3-reports`, and both `HEAD` and the remote branch matched the reviewed commit exactly.
+- `python -m unittest discover -s tests`: `Ran 138 tests`; `OK (skipped=6)`, exit 0. Local symlink creation remains unavailable.
+- `python loginwatch.py samples/sample.log`: exit 0; documented summary counts and zero findings.
+- `git diff --check`: passed.
+
+PR #3 is ready for the owner to merge. Phase 4 has been assigned conditionally
+on that merge; stop here while PR #3 is unmerged. No tags or GitHub releases
+have been created by Codex.

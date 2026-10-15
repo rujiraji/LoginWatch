@@ -37,7 +37,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stderr, "")
         self.assertEqual(result.stdout, EXPECTED_SAMPLE_OUTPUT + "\n\nFindings: 0\n"
-                         "No suspicious patterns detected by the three default rules.\n")
+                         "No suspicious patterns detected by the three rules.\n")
         self.assertEqual(path.read_bytes(), original)
 
     def test_empty_file_and_path_with_spaces(self):
@@ -57,7 +57,7 @@ Ignored blank lines: 0
 Skipped nonblank lines: 0
 
 Findings: 0
-No suspicious patterns detected by the three default rules.
+No suspicious patterns detected by the three rules.
 """)
 
     def test_unsupported_file_completes_with_zero_events(self):
@@ -147,8 +147,8 @@ No suspicious patterns detected by the three default rules.
         self.assertIn("required", result.stderr)
         self.assertNotIn("Traceback", result.stderr)
 
-    def test_future_phase_options_are_not_available(self):
-        for option in ("--config", "--json"):
+    def test_unknown_options_are_rejected(self):
+        for option in ("--unknown", "--dashboard"):
             with self.subTest(option=option):
                 result = self.run_cli("samples/sample.log", option, "unused.json")
                 self.assertEqual(result.returncode, 2)

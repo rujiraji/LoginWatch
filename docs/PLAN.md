@@ -9,7 +9,7 @@ Codex: implementation, tests, documentation, and verification evidence.
 | --- | --- |
 | 1. Parser and activity summary | Accepted |
 | 2. Detection and evidence | Accepted |
-| 3. Configuration and JSON reports | Planned |
+| 3. Configuration and JSON reports | Accepted |
 | 4. Release and portfolio delivery | Planned |
 
 Use Planned, Ready to implement, In progress, Implemented — awaiting review, or Accepted. Codex records implementation and checks; owner review determines acceptance.
@@ -51,6 +51,9 @@ Acceptance:
 - Equivalent runs yield stable analysis data and ordering.
 - Output failures return nonzero status with clear messages.
 - README documents configuration, exports, and log-data sensitivity.
+- Duplicate configuration keys and unsafe integer values are rejected; effective configuration is immutable and findings show actual thresholds.
+- Atomic UTF-8 export rejects input/configuration aliases, preserves existing reports on failure, and cleans up temporary files.
+- Complete schema 1.0 reports have reproducible bytes and preserve every finding/evidence field, including raw source text.
 
 ## Phase 4 — Delivery
 
@@ -63,6 +66,9 @@ Acceptance:
 - Demo explains why each finding triggers and shows a quiet normal case.
 - Release notes state verified functionality, test environment, and limitations.
 - Résumé wording accurately represents owner work and AI assistance, with no invented impact numbers.
+- README is a concise entry point; detailed verification history stays in PLAN, with a reproducible walkthrough and proposed release notes in separate documents.
+- Minimal GitHub Actions CI runs unittest on Python 3.11 and 3.14 on Ubuntu and Windows; only observed outcomes and platform skips are reported.
+- Fresh-checkout setup, demos, and JSON reproducibility checks pass without third-party runtime packages. Do not create tags or publish a GitHub release yet.
 
 ## Phase handoff
 
@@ -72,13 +78,16 @@ After each phase, Codex reports changed components, commands executed, results, 
 
 Phase 1 is Accepted and was merged by the owner via PR #1 at commit `357ea3e`.
 Phase 2 is Accepted following independent review of commit
-`4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2. Finalize acceptance
-documentation on `phase-2-detection`, commit, and push. The owner performs the
-merge; stop while PR #2 is unmerged. Phase 3 configuration and JSON export have
-been assigned conditionally on that merge. Then read the repository documents,
-update `main` using a fast-forward-only pull, and create `phase-3-reports` (or
-inspect an existing branch before reusing it without reset/overwrite).
-Do not merge PRs or begin Phase 4 as Codex.
+`4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2, merged by the owner at
+`f179620ddd0adefde9432051b362f46633db326e`. Phase 3 is Accepted following
+independent review of commit `16751333a60bec6f93ec6568a46ecefb08d63966` in PR #3.
+Finalize acceptance documentation on `phase-3-reports`, commit, and push.
+The owner performs the merge; stop while PR #3 is unmerged. Phase 4 portfolio
+delivery is assigned conditionally on that merge: read repository instructions
+and project documents, update `main` with a fast-forward-only pull, and create
+`phase-4-delivery` (inspect an existing branch before reuse). Keep runtime scope
+unchanged. Do not merge PRs, create tags, publish a release, or claim final
+acceptance as Codex.
 
 ## Phase 1 implementation and verification
 
@@ -240,4 +249,109 @@ Checks run by Codex on Windows, Python 3.14.6:
 
 The authenticated terminal's GitHub CLI confirmed
 `https://github.com/rujiraji/LoginWatch/pull/2` was OPEN with no merge timestamp.
-PR #2 is ready for the owner's merge; Codex did not merge it or begin Phase 3.
+At that handoff, PR #2 was ready for the owner's merge; Codex did not merge it
+or begin Phase 3. The owner has since merged it; the Phase 3 record follows.
+
+## Phase 3 implementation and verification
+
+On 2026-10-15, the authenticated terminal's `gh` CLI confirmed PR #2 was
+MERGED at `f179620ddd0adefde9432051b362f46633db326e`. The checkout was clean on
+`phase-2-detection`, with the correct `origin` URL. Codex switched to `main`,
+ran `git pull --ff-only origin main`, and verified the merge. No local or
+remote `phase-3-reports` branch existed; a new branch was created from updated
+`main`. No repository was initialized and no user work was overwritten.
+
+Before implementation, SPEC defined the exact versioned JSON structure,
+byte formatting, integer bounds, and atomic-export/path-protection contracts.
+
+Changed components and flow:
+
+- `configuration.py`: strict UTF-8 JSON loading with duplicate/non-finite rejection, explicit validation of all six fields, positive 32-bit bounds, and frozen effective configuration. The CLI loads this before parsing input.
+- `analyzer.py`: receives immutable effective configuration, preserves default detection semantics, and records/explains the actual count/window thresholds in every finding. Parsing remains independent and unchanged.
+- `reporter.py`: serializes schema 1.0 with all summary, configuration, finding, and supporting-event fields; metadata timestamps are UTC with `Z` and raw text is preserved. Stable keys/indentation/LF encoding omit generated or machine-specific data. Console no-findings wording refers to the three rules, including custom settings.
+- `report_export.py`: protects input/configuration aliases by resolved path and existing-file identity, writes/flushes/fsyncs a temporary file in the destination directory, closes it, and atomically replaces the destination. Failures preserve the existing report and clean up temporary files.
+- `loginwatch.py`: coordinates `--config` and `--json`, preserves console reporting on success, and emits concise nonzero-status errors without partial output on configuration/export failure.
+- `samples/custom.log`, `samples/custom-config.json`, and `samples/README.md`: a synthetic demo with independently specified counts and exact trigger/evidence membership for all three custom thresholds. The same log stays quiet under defaults.
+- `tests/`: configuration types/limits/duplicates/errors, each configurable rule and boundaries, complete JSON schema/evidence/UTC/order/repeatability, CLI validation/export failures, path aliases, existing-file preservation, and simulated partial-write/fsync/replace failures. Previous parser/summary/detection behavior is retained.
+- README, SPEC, and PLAN: usage, schema, safety/replacement policy, data sensitivity, verification, and Phase 3 status. `.gitignore` ignores only the two generated demo report filenames in addition to existing Python cache entries.
+
+Verification by Codex: Windows PowerShell, Python 3.14.6, standard library only.
+
+| Exact command | Result |
+| --- | --- |
+| `python -m unittest discover -s tests` | `Ran 138 tests`; `OK (skipped=6)`, exit 0 |
+| `python loginwatch.py samples/sample.log` | Exit 0; 9 events, 4 successes, 5 failures, 3 IPs, 5 usernames, 2 blank lines, 4 skipped lines, zero findings |
+| `python loginwatch.py samples/normal.log` | Exit 0; 8 events, 6 successes, 2 failures, 3 IPs, 3 usernames, no blank/skipped lines, zero findings |
+| `python loginwatch.py samples/suspicious.log` | Exit 0; 14 events, 3 successes, 11 failures, 3 IPs, 7 usernames, no blank/skipped lines, five findings |
+| `python loginwatch.py samples/custom.log` | Exit 0; 5 events, 1 success, 4 failures, 2 IPs, 3 usernames, no blank/skipped lines, zero findings |
+| `python loginwatch.py samples/custom.log --config samples/custom-config.json --json custom-report.json` | Exit 0; same summary, three findings and full schema 1.0 export matching independent fixture expectations |
+| `python loginwatch.py samples/suspicious.log --json suspicious-report.json` | Exit 0; same summary/five findings as without export, full schema 1.0 export |
+| `python loginwatch.py --help` | Exit 0; input, configuration, and JSON export options |
+| `git diff --check` | Passed |
+| `py --list-paths` | Only 3.14 runtimes listed |
+| `py -3.11 --version` | Exit 1: no matching runtime installed; no Python version was installed for this task |
+
+The original sample, normal, suspicious, and custom demo results match the
+independent fixture tables in `samples/README.md`. Tests compare JSON bytes
+across separate processes, output destinations, and equivalent source path
+spellings, and verify complete evidence and effective thresholds. An initial
+test incorrectly assumed a decoder recursion limit common to all Python
+versions; it now accepts either documented decoding or root-validation errors,
+with a separate check for converting decoder recursion errors cleanly.
+
+Local verification limitations: six symlink cases were skipped because this
+Windows session cannot create symlinks (confirmed `WinError 1314`, required
+privilege absent).
+Hard-link collision cases passed locally. The later independent Phase 3
+review below passed all 138 tests without skips on Linux/Python 3.12.14,
+including symlink and hard-link protection. Python 3.11 is unavailable here
+and remains unverified, as does large-log performance. Events, findings, and
+JSON serialization remain in memory. Disk-full, permission, and replacement failures include mock
+tests alongside real missing-path, directory, encoding, and hard-link cases.
+Atomic replacement does not coordinate with concurrent filesystem changes or
+guarantee directory-entry crash durability. Reports retain usernames and raw
+log text; IDs remain scoped to source records/line numbers. No dashboard,
+database, integrations, or Phase 4 work was added.
+
+At implementation handoff, Phase 3 was Implemented — awaiting review. Codex
+pushed `phase-3-reports` and opened PR #3 using the authenticated terminal's
+`gh` CLI, then stopped. Owner acceptance and the subsequent checks follow;
+Codex has not merged it or begun Phase 4.
+
+## Phase 3 acceptance and independent review
+
+The owner accepted Phase 3 based on independent review of commit
+`16751333a60bec6f93ec6568a46ecefb08d63966`, PR #3. These results were reported
+by the owner, separately from checks run by Codex:
+
+- Linux, Python 3.12.14: all 138 tests passed with no skips.
+- Symlink and hard-link protection tests passed.
+- All seven documented demo/help commands passed.
+- Both JSON reports matched independently checked summaries, rules, thresholds, and supporting source lines.
+- Repeated exports produced identical bytes.
+- Source files remained unchanged and no temporary export files remained.
+- No blocking issues were found. Python 3.11 and large-log performance remain unverified.
+
+## Phase 3 acceptance-handoff checks by Codex
+
+On 2026-10-15, Codex verified the current repository root and `origin` URL
+for `https://github.com/rujiraji/LoginWatch`. Before documentation edits,
+the working tree was clean on `phase-3-reports`; `HEAD` and
+`origin/phase-3-reports` pointed to the reviewed commit, and
+`git diff 16751333a60bec6f93ec6568a46ecefb08d63966 --` was empty.
+No implementation or unrelated work was changed.
+
+Checks run by Codex on Windows, Python 3.14.6:
+
+| Exact command | Result |
+| --- | --- |
+| `python --version` | `Python 3.14.6`, exit 0 |
+| `python -m unittest discover -s tests` | `Ran 138 tests`; `OK (skipped=6)`, exit 0; symlink creation remains unavailable in this Windows session |
+| `python loginwatch.py samples/sample.log` | Exit 0; 9 events, 4 successes, 5 failures, 3 IPs, 5 usernames, 2 blank lines, 4 skipped lines, zero findings |
+| `git diff --check` | Passed |
+| `git fetch origin` | Completed successfully; `origin/main` remained at Phase 2 merge commit `f179620ddd0adefde9432051b362f46633db326e` |
+
+The authenticated terminal's `gh` CLI confirmed
+`https://github.com/rujiraji/LoginWatch/pull/3` was OPEN with no merge timestamp.
+PR #3 is ready for the owner's merge; Codex stops here without merging it,
+beginning Phase 4, creating tags, or publishing a GitHub release.

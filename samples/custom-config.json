@@ -1,0 +1,8 @@
+{
+  "repeated_failures_count": 2,
+  "repeated_failures_window_seconds": 30,
+  "success_after_failures_count": 2,
+  "success_after_failures_window_seconds": 60,
+  "multiple_accounts_count": 2,
+  "multiple_accounts_window_seconds": 60
+}

@@ -1,13 +1,11 @@
-"""Deterministic Phase 2 rules over a sorted view of parsed events."""
+"""Deterministic rules over a sorted view, using immutable effective thresholds."""
 
 from collections import deque
 from datetime import datetime, timedelta
 from typing import Iterable
 
+from configuration import DetectionConfig
 from models import Finding, LoginEvent, RuleID
-
-
-THRESHOLD_COUNT = 5
 
 
 def _expire(queue: deque[LoginEvent], now: datetime, window_seconds: int) -> None:
@@ -21,6 +19,7 @@ def _finding(
     rule_id: RuleID,
     trigger: LoginEvent,
     evidence: tuple[LoginEvent, ...],
+    threshold_count: int,
     window_seconds: int,
     explanation: str,
 ) -> Finding:
@@ -33,7 +32,7 @@ def _finding(
         evidence_start=evidence[0].timestamp,
         evidence_end=evidence[-1].timestamp,
         event_count=len(evidence),
-        threshold_count=THRESHOLD_COUNT,
+        threshold_count=threshold_count,
         window_seconds=window_seconds,
         explanation=explanation,
         evidence=evidence,
@@ -41,7 +40,7 @@ def _finding(
 
 
 def _failure_findings(
-    events: list[LoginEvent], rule_id: RuleID, window_seconds: int
+    events: list[LoginEvent], rule_id: RuleID, threshold_count: int, window_seconds: int
 ) -> list[Finding]:
     """Emit once per IP episode, rearming after expiry before adding a failure."""
     queues: dict[str, deque[LoginEvent]] = {}
@@ -60,58 +59,66 @@ def _failure_findings(
         _expire(queue, event.timestamp, window_seconds)
         # Expiry can end an episode during a gap, even if this failure will
         # immediately restore the threshold. Check before appending it.
-        if count(queue) < THRESHOLD_COUNT:
+        if count(queue) < threshold_count:
             active.discard(event.ip)
         queue.append(event)
-        if count(queue) < THRESHOLD_COUNT or event.ip in active:
+        if count(queue) < threshold_count or event.ip in active:
             continue
         active.add(event.ip)
         if rule_id == "multiple_accounts":
             explanation = (
                 f"{len(queue)} failed password logins from {event.ip} involved "
                 f"{count(queue)} distinct usernames within {window_seconds} seconds "
-                f"(threshold: {THRESHOLD_COUNT} distinct usernames)."
+                f"(threshold: {threshold_count} distinct usernames)."
             )
         else:
             explanation = (
                 f"{len(queue)} failed password logins from {event.ip} occurred "
-                f"within {window_seconds} seconds (threshold: {THRESHOLD_COUNT} failures)."
+                f"within {window_seconds} seconds (threshold: {threshold_count} failures)."
             )
-        findings.append(_finding(rule_id, event, tuple(queue), window_seconds, explanation))
+        findings.append(_finding(
+            rule_id, event, tuple(queue), threshold_count, window_seconds, explanation
+        ))
     return findings
 
 
-def _success_findings(events: list[LoginEvent]) -> list[Finding]:
+def _success_findings(events: list[LoginEvent], config: DetectionConfig) -> list[Finding]:
     queues: dict[tuple[str, str], deque[LoginEvent]] = {}
     findings = []
-    window_seconds = 600
+    window_seconds = config.success_after_failures_window_seconds
+    threshold_count = config.success_after_failures_count
     for event in events:
         key = (event.ip, event.username)
         queue = queues.setdefault(key, deque())
         _expire(queue, event.timestamp, window_seconds)
         if event.result == "failure":
             queue.append(event)
-        elif len(queue) >= THRESHOLD_COUNT:
+        elif len(queue) >= threshold_count:
             explanation = (
                 f"A successful password login for '{event.username}' from {event.ip} "
                 f"followed {len(queue)} failures against the same IP and username "
                 f"within the preceding {window_seconds} seconds "
-                f"(threshold: {THRESHOLD_COUNT} failures)."
+                f"(threshold: {threshold_count} failures)."
             )
             evidence = (*queue, event)
             findings.append(_finding(
-                "success_after_failures", event, evidence, window_seconds, explanation
+                "success_after_failures", event, evidence, threshold_count,
+                window_seconds, explanation
             ))
     return findings
 
 
-def analyze(events: Iterable[LoginEvent]) -> tuple[Finding, ...]:
-    """Analyze without changing events or source order; use the fixed defaults."""
+def analyze(
+    events: Iterable[LoginEvent], config: DetectionConfig = DetectionConfig()
+) -> tuple[Finding, ...]:
+    """Analyze without changing events or source order; omitted config uses defaults."""
     ordered = sorted(events, key=lambda event: (event.timestamp, event.line_number))
     findings = (
-        _failure_findings(ordered, "repeated_failures", 300)
-        + _success_findings(ordered)
-        + _failure_findings(ordered, "multiple_accounts", 600)
+        _failure_findings(ordered, "repeated_failures", config.repeated_failures_count,
+                          config.repeated_failures_window_seconds)
+        + _success_findings(ordered, config)
+        + _failure_findings(ordered, "multiple_accounts", config.multiple_accounts_count,
+                            config.multiple_accounts_window_seconds)
     )
     return tuple(sorted(findings, key=lambda finding: (
         finding.trigger_timestamp,
