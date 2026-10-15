@@ -7,6 +7,8 @@ evidence (Phase 2) are Accepted following owner-reported independent review of
 commit `4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2. Configuration/JSON export
 (Phase 3) are Accepted following owner-reported independent review of commit
 `16751333a60bec6f93ec6568a46ecefb08d63966` in PR #3.
+Phase 4 portfolio documentation, walkthrough, delivery verification, and CI
+are Implemented — awaiting review. Runtime contracts below are unchanged.
 
 ## Goal and user workflow
 
@@ -19,7 +21,8 @@ and IPv6, three detection rules, configurable thresholds, console output, JSON
 export, synthetic fixtures, meaningful tests, and a repeatable demo. Phase 1
 delivers parsing and console summary; Phase 2 adds default detection rules and
 console evidence. Phase 3 adds validated effective configuration and JSON
-export; Phase 4 release/portfolio delivery remains planned.
+export. Phase 4 prepares the walkthrough, portfolio/release documents,
+fresh-checkout verification, and CI; no tag or published release is created.
 
 Out of scope: dashboard, database, email or chat alerts, real-time collection, automatic blocking, external intelligence services, arbitrary log formats, and machine learning. PT/PERSTAT automation is a separate project.
 
@@ -59,6 +62,9 @@ The Phase 1 fixture `samples/sample.log` has 9 parsed events, 4 successes,
 5 failures, 3 unique IPs, 5 unique usernames, 2 ignored blank lines, and
 4 skipped nonblank lines. The independent line-by-line expectations are in
 `samples/README.md`; the verified console output is in the root README.
+The delivery walkthrough is in `docs/WALKTHROUGH.md` and executable demo
+verification is `python scripts/verify_demo.py`. The latter checks synthetic
+fixture expectations and repeat exports without changing runtime behavior.
 
 ## Detection rules — Phase 2
 

@@ -10,7 +10,7 @@ Codex: implementation, tests, documentation, and verification evidence.
 | 1. Parser and activity summary | Accepted |
 | 2. Detection and evidence | Accepted |
 | 3. Configuration and JSON reports | Accepted |
-| 4. Release and portfolio delivery | Planned |
+| 4. Release and portfolio delivery | Implemented — awaiting review |
 
 Use Planned, Ready to implement, In progress, Implemented — awaiting review, or Accepted. Codex records implementation and checks; owner review determines acceptance.
 
@@ -81,13 +81,13 @@ Phase 2 is Accepted following independent review of commit
 `4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2, merged by the owner at
 `f179620ddd0adefde9432051b362f46633db326e`. Phase 3 is Accepted following
 independent review of commit `16751333a60bec6f93ec6568a46ecefb08d63966` in PR #3.
-Finalize acceptance documentation on `phase-3-reports`, commit, and push.
-The owner performs the merge; stop while PR #3 is unmerged. Phase 4 portfolio
-delivery is assigned conditionally on that merge: read repository instructions
-and project documents, update `main` with a fast-forward-only pull, and create
-`phase-4-delivery` (inspect an existing branch before reuse). Keep runtime scope
-unchanged. Do not merge PRs, create tags, publish a release, or claim final
-acceptance as Codex.
+The owner merged PR #3 at `5e7c9cac31e8ea21d581a71ab80c1abbf2c14adc`.
+Phase 4 is Implemented — awaiting review on `phase-4-delivery`: concise README,
+walkthrough, architecture/interview notes, proposed release/résumé wording,
+minimal CI, and fresh-checkout/demo verification. Keep runtime scope unchanged.
+Commit, push, open a PR using the authenticated terminal's `gh`, report actual
+verification/CI outcomes and limits, and stop for independent review. Do not
+merge PRs, create tags, publish a release, or claim final acceptance as Codex.
 
 ## Phase 1 implementation and verification
 
@@ -353,5 +353,33 @@ Checks run by Codex on Windows, Python 3.14.6:
 
 The authenticated terminal's `gh` CLI confirmed
 `https://github.com/rujiraji/LoginWatch/pull/3` was OPEN with no merge timestamp.
-PR #3 is ready for the owner's merge; Codex stops here without merging it,
-beginning Phase 4, creating tags, or publishing a GitHub release.
+At that handoff, PR #3 was ready for the owner's merge. Codex stopped without
+merging it, beginning Phase 4, creating tags, or publishing a GitHub release.
+The owner has since merged it; the Phase 4 record follows.
+
+## Phase 4 delivery implementation and verification
+
+On 2026-10-15, `gh` confirmed PR #3 was MERGED at
+`5e7c9cac31e8ea21d581a71ab80c1abbf2c14adc`. The actual checkout was clean on
+`phase-3-reports` with `origin` pointing to `https://github.com/rujiraji/LoginWatch.git`.
+Codex switched to `main` and ran `git pull --ff-only origin main`, which
+fast-forwarded to the merge. No local or remote `phase-4-delivery` branch
+existed; it was created from updated `main` without resetting user work.
+
+Delivered artifacts:
+
+- README is a concise entry point; historical verification remains in this file.
+- `docs/WALKTHROUGH.md` explains the quiet normal demo, five suspicious findings, default/custom behavior, full JSON evidence, and repeatability checks.
+- `docs/ARCHITECTURE.md` maps components and inputs/outputs and supplies interview prompts on inclusive windows, ordering, episode rearming, deterministic bytes, atomic export, and limits.
+- `docs/RELEASE_NOTES.md` is a proposed first-release description; `docs/PORTFOLIO.md` distinguishes owner requirements/design/review from Codex-assisted implementation and proposes accurate résumé wording without usage/impact/performance claims.
+- `scripts/verify_demo.py` drives all seven CLI demo/help commands plus two repeat exports, independently checks documented summaries/findings/thresholds/full supporting records, and checks byte equality, source preservation, and temporary-file cleanup. Its reports use a temporary directory; existing checkout reports are left alone.
+- `.github/workflows/tests.yml` runs verbose unittest on the Python 3.11/3.14 × Ubuntu/Windows matrix for PRs into `main` and pushes to `main`, with read-only repository permissions and no application package install. Action versions follow the official [checkout](https://github.com/actions/checkout) and [setup-python](https://github.com/actions/setup-python) usage; actual CI evidence is recorded after execution.
+
+Runtime modules, existing tests, and fixtures are unchanged from accepted
+Phase 3. No dashboard, database, integration, packaging framework, tag, or
+published release was added. Documentation writing used the HumanWriting
+skill to keep claims specific and contribution disclosure accurate.
+
+Fresh-checkout verification and CI execution are pending at this documentation
+checkpoint; do not infer passing results from the workflow definition. Record
+observed commands, environments, test totals/skips, and run URLs before handoff.
