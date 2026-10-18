@@ -10,7 +10,11 @@ Codex: implementation, tests, documentation, and verification evidence.
 | 1. Parser and activity summary | Accepted |
 | 2. Detection and evidence | Accepted |
 | 3. Configuration and JSON reports | Accepted |
-| 4. Release and portfolio delivery | Planned |
+| 4. Release and portfolio delivery | Accepted |
+
+All four planned phases are complete. The project is **Accepted and
+release-ready, unpublished**. PR #4 awaits the owner's final merge; no tag or
+GitHub release has been published.
 
 Use Planned, Ready to implement, In progress, Implemented — awaiting review, or Accepted. Codex records implementation and checks; owner review determines acceptance.
 
@@ -81,13 +85,15 @@ Phase 2 is Accepted following independent review of commit
 `4b51f8e998a6dfe193d2a95000859ee382c83342` in PR #2, merged by the owner at
 `f179620ddd0adefde9432051b362f46633db326e`. Phase 3 is Accepted following
 independent review of commit `16751333a60bec6f93ec6568a46ecefb08d63966` in PR #3.
-Finalize acceptance documentation on `phase-3-reports`, commit, and push.
-The owner performs the merge; stop while PR #3 is unmerged. Phase 4 portfolio
-delivery is assigned conditionally on that merge: read repository instructions
-and project documents, update `main` with a fast-forward-only pull, and create
-`phase-4-delivery` (inspect an existing branch before reuse). Keep runtime scope
-unchanged. Do not merge PRs, create tags, publish a release, or claim final
-acceptance as Codex.
+The owner merged PR #3 at `5e7c9cac31e8ea21d581a71ab80c1abbf2c14adc`.
+Phase 4 is Accepted after owner-reported independent review of commit
+`5df114e2da0ce37590e840822122e2d3a07aeb30`, PR #4. All four planned phases
+are complete; finalize acceptance documentation only on `phase-4-delivery`.
+Record independent review separately from Codex's checks, run the tests/demo
+verifier and diff checks, commit/push documentation updates, and inspect PR #4's
+latest CI. The project is accepted and release-ready, unpublished. Stop with
+PR #4 ready for the owner's final merge. Do not merge, create tags, publish a
+release, or add features.
 
 ## Phase 1 implementation and verification
 
@@ -353,5 +359,171 @@ Checks run by Codex on Windows, Python 3.14.6:
 
 The authenticated terminal's `gh` CLI confirmed
 `https://github.com/rujiraji/LoginWatch/pull/3` was OPEN with no merge timestamp.
-PR #3 is ready for the owner's merge; Codex stops here without merging it,
-beginning Phase 4, creating tags, or publishing a GitHub release.
+At that handoff, PR #3 was ready for the owner's merge. Codex stopped without
+merging it, beginning Phase 4, creating tags, or publishing a GitHub release.
+The owner has since merged it; the Phase 4 record follows.
+
+## Phase 4 delivery implementation and verification
+
+On 2026-10-15, `gh` confirmed PR #3 was MERGED at
+`5e7c9cac31e8ea21d581a71ab80c1abbf2c14adc`. The actual checkout was clean on
+`phase-3-reports` with `origin` pointing to `https://github.com/rujiraji/LoginWatch.git`.
+Codex switched to `main` and ran `git pull --ff-only origin main`, which
+fast-forwarded to the merge. No local or remote `phase-4-delivery` branch
+existed; it was created from updated `main` without resetting user work.
+
+Delivered artifacts:
+
+- README is a concise entry point; historical verification remains in this file.
+- `docs/WALKTHROUGH.md` explains the quiet normal demo, five suspicious findings, default/custom behavior, full JSON evidence, and repeatability checks.
+- `docs/ARCHITECTURE.md` maps components and inputs/outputs and supplies interview prompts on inclusive windows, ordering, episode rearming, deterministic bytes, atomic export, and limits.
+- `docs/RELEASE_NOTES.md` is a proposed first-release description; `docs/PORTFOLIO.md` distinguishes owner requirements/design/review from Codex-assisted implementation and proposes accurate résumé wording without usage/impact/performance claims.
+- `scripts/verify_demo.py` drives all seven CLI demo/help commands plus two repeat exports, independently checks documented summaries/findings/thresholds/full supporting records, and checks byte equality, source preservation, and temporary-file cleanup. Its reports use a temporary directory; existing checkout reports are left alone.
+- `.github/workflows/tests.yml` runs verbose unittest on the Python 3.11/3.14 × Ubuntu/Windows matrix for PRs into `main` and pushes to `main`, with read-only repository permissions and no application package install. Action versions follow the official [checkout](https://github.com/actions/checkout) and [setup-python](https://github.com/actions/setup-python) usage; actual CI evidence is recorded after execution.
+
+Runtime modules, existing tests, and fixtures are unchanged from accepted
+Phase 3. No dashboard, database, integration, packaging framework, tag, or
+published release was added. Documentation writing used the HumanWriting
+skill to keep claims specific and contribution disclosure accurate.
+
+### Fresh-checkout results
+
+Codex cloned `phase-4-delivery` from GitHub into a new temporary directory using
+`git clone --branch phase-4-delivery https://github.com/rujiraji/LoginWatch.git LoginWatch-demo`.
+The clone was clean at `76b5f3bc1f38e4094de75b5fe6d00f8230e82061`.
+A separate `python -m venv --without-pip` environment used Python 3.14.6 on
+Windows. `importlib.metadata.distributions()` returned an empty list; no
+third-party packages were installed. The commands below used that environment's
+Python executable from the clone root, shown as `python` for readability.
+
+| Command | Observed result |
+| --- | --- |
+| `python --version` | Python 3.14.6 |
+| `python -m unittest discover -s tests` | `Ran 138 tests`; `OK (skipped=6)`, exit 0; local Windows symlink privilege unavailable |
+| `python loginwatch.py samples/sample.log` | Exit 0; 9 events, 4 successes, 5 failures, 3 IPs, 5 usernames, 2 blank lines, 4 skipped lines, zero findings |
+| `python loginwatch.py samples/normal.log` | Exit 0; 8 events, 6 successes, 2 failures, 3 IPs, 3 usernames, no blank/skipped lines, zero findings |
+| `python loginwatch.py samples/suspicious.log` | Exit 0; 14 events, 3 successes, 11 failures, 3 IPs, 7 usernames, no blank/skipped lines, five expected findings |
+| `python loginwatch.py samples/custom.log` | Exit 0; 5 events, 1 success, 4 failures, 2 IPs, 3 usernames, no blank/skipped lines, zero findings |
+| `python loginwatch.py samples/custom.log --config samples/custom-config.json --json custom-report.json` | Exit 0; same summary, three expected findings and full report |
+| `python loginwatch.py samples/suspicious.log --json suspicious-report.json` | Exit 0; same summary/five findings and full report |
+| `python loginwatch.py --help` | Exit 0; positional input, `--config`, and `--json` help |
+| `python scripts/verify_demo.py` | Exit 0; all seven demo/help commands and two repeat exports passed |
+| `git status --porcelain=v1` in the clone after verification | Empty; only ignored caches/demo reports were generated |
+| `git diff --check` | Passed |
+
+The verifier checked every summary count, ordered rule/ID/trigger, actual
+threshold, full evidence membership/raw record, and UTC metadata against
+fixed expectations from `samples/README.md`. Both exports repeated with
+identical bytes. Sources/configuration stayed unchanged and no temporary export
+files remained. The two reports created by the literal documented commands in
+the clone were also checked against the verifier's independent expectations.
+Local Markdown target checks found no missing relative file links.
+
+### Observed GitHub Actions results
+
+[CI run 38804423752](https://github.com/rujiraji/LoginWatch/actions/runs/38804423752)
+for PR #4, associated with branch head
+`76b5f3bc1f38e4094de75b5fe6d00f8230e82061`, completed successfully. Codex read
+the job results and logs via the authenticated terminal's `gh` CLI:
+
+| Matrix job | Reported interpreter | Unittest result | Skips |
+| --- | --- | --- | --- |
+| ubuntu-latest / Python 3.11 | 3.11.17 | 138 tests, OK | 0 |
+| ubuntu-latest / Python 3.14 | 3.14.8 | 138 tests, OK | 0 |
+| windows-latest / Python 3.11 | 3.11.9 | 138 tests, OK | 0 |
+| windows-latest / Python 3.14 | 3.14.8 | 138 tests, OK | 0 |
+
+The exact CI command was `python -m unittest discover -s tests -v`, preceded
+by `python --version`. No application package installation step was used.
+Both hosted platforms permitted link creation; symlink/hard-link tests passed.
+Python 3.11 is now verified in these observed CI environments. Earlier
+references to it being unverified describe the evidence available at those
+phase boundaries. The local Windows six-skip result remains a separate host
+limitation, not a skipped CI check. Subsequent documentation-only commits can
+produce additional runs; consult PR #4 for checks on its latest head.
+
+### Implementation handoff and remaining limits
+
+At implementation handoff, PR #4 was a reviewable delivery candidate and
+Phase 4 was Implemented — awaiting review. Codex did not merge, create a tag,
+publish a release, or grant acceptance. The owner's subsequent acceptance is
+recorded below.
+
+Runtime modules, existing tests, and fixtures remain unchanged from the
+accepted Phase 3 baseline, confirmed with `git diff --name-only main --` for
+those paths. Large-log performance is unverified; memory usage and verbose
+evidence output are unchanged. The input grammar is narrow and rules are
+investigation heuristics. Reports retain usernames/raw text, IDs depend on
+source lines, and atomic export does not coordinate concurrent filesystem
+changes or guarantee directory-entry crash durability. Fresh-checkout demos
+were exercised locally on Windows 3.14.6; CI ran the unittest suite, not the
+separate demo verifier. Independent reviews supplied by the owner remain
+distinct from the Codex and CI results above.
+
+## Phase 4 acceptance and independent review
+
+On 2026-10-17, the owner accepted Phase 4 after independent review of commit
+`5df114e2da0ce37590e840822122e2d3a07aeb30`, PR #4. These results were supplied
+by the owner and are separate from checks run by Codex:
+
+- Linux/Python 3.12.14, new environment without pip or installed distributions: all 138 tests passed without skips.
+- The demo verifier and both literal export commands passed.
+- All four final-commit CI jobs were independently confirmed: 138 tests, no skips, Python 3.11/3.14 on Ubuntu/Windows.
+- Runtime code, existing tests, and fixtures remained unchanged.
+- Documentation and relative file links were checked.
+- No blocking issues were found.
+
+All four planned phases are now Accepted and complete. Acceptance is based on
+the owner's decision; it is separate from merging, tagging, or publishing a
+release. The project is release-ready and unpublished. Large-log performance
+remains unverified; the documented runtime and data-sensitivity limits remain.
+
+### Final-commit CI evidence for the accepted implementation
+
+[CI run 38804749008](https://github.com/rujiraji/LoginWatch/actions/runs/38804749008)
+is associated with reviewed commit
+`5df114e2da0ce37590e840822122e2d3a07aeb30`. Codex rechecked its completed
+job results and logs on 2026-10-17:
+
+| Matrix job | Reported interpreter | Unittest result | Skips |
+| --- | --- | --- | --- |
+| ubuntu-latest / Python 3.11 | 3.11.17 | 138 tests, OK | 0 |
+| ubuntu-latest / Python 3.14 | 3.14.8 | 138 tests, OK | 0 |
+| windows-latest / Python 3.11 | 3.11.9 | 138 tests, OK | 0 |
+| windows-latest / Python 3.14 | 3.14.8 | 138 tests, OK | 0 |
+
+The CI command was `python -m unittest discover -s tests -v`. These are
+observed results, also independently confirmed by the reviewer. The earlier
+run for `76b5f3b` remains historical evidence; this run verifies the final
+implementation commit reviewed for acceptance. Acceptance-documentation
+updates trigger fresh checks, visible on PR #4's latest head.
+
+### Codex acceptance-finalization checks
+
+On 2026-10-17, Codex verified the actual repository root and `origin` URL for
+`https://github.com/rujiraji/LoginWatch`. Before editing documentation, the
+working tree was clean on `phase-4-delivery`; `HEAD` and the fetched remote
+branch matched `5df114e2da0ce37590e840822122e2d3a07aeb30`, and
+`git diff 5df114e2da0ce37590e840822122e2d3a07aeb30 --` was empty. No unrelated
+work was present or overwritten. Only documentation is changed for acceptance;
+runtime modules, tests, fixtures, verifier, and CI workflow remain unchanged.
+
+Checks run by Codex on Windows, Python 3.14.6:
+
+| Exact command | Observed result |
+| --- | --- |
+| `python --version` | Python 3.14.6, exit 0 |
+| `python -m unittest discover -s tests` | `Ran 138 tests`; `OK (skipped=6)`, exit 0; local symlink creation privilege remains unavailable |
+| `python scripts/verify_demo.py` | Exit 0; seven demo/help commands plus two repeat exports, complete JSON/evidence, byte equality, source preservation, and temporary export cleanup passed |
+| `python loginwatch.py samples/sample.log` | Exit 0; 9 events, 4 successes, 5 failures, 3 IPs, 5 usernames, 2 blank lines, 4 skipped lines, zero findings |
+| `git diff --check` | Passed |
+| `git fetch origin` | Completed successfully; `origin/main` remained at Phase 3 merge commit `5e7c9cac31e8ea21d581a71ab80c1abbf2c14adc` |
+| `git ls-remote --tags origin` | No tags returned |
+| `gh release list --repo rujiraji/LoginWatch --json tagName,isDraft,isPrerelease` | Empty list |
+
+The walkthrough now uses `main` for ongoing clone instructions and states that
+the delivery documents/verifier reach `main` after the owner's final merge.
+The authenticated terminal's `gh` CLI confirmed PR #4 remains OPEN and unmerged.
+After pushing documentation, check its latest CI and stop with the PR ready
+for the owner. No merge, tag, release publication, feature work, or additional
+phase is included in this acceptance finalization.
