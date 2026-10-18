@@ -2,17 +2,20 @@
 
 This demo uses synthetic logs and documentation IP addresses. Run commands
 from the repository root with Python 3.11+; no third-party packages are needed.
-During Phase 4 review, a separate checkout can be created with:
+For ongoing use, create a separate checkout of `main`:
 
 ```bash
-git clone --branch phase-4-delivery https://github.com/rujiraji/LoginWatch.git LoginWatch-demo
+git clone --branch main https://github.com/rujiraji/LoginWatch.git LoginWatch-demo
 cd LoginWatch-demo
 python --version
 python -m unittest discover -s tests
 ```
 
-The branch is a review candidate. After the owner merges it, the walkthrough
-will also be available on `main`. Test outcomes, exact environments, and skips
+All four planned phases are Accepted; the project is release-ready and
+unpublished. PR #4 still awaits the owner's final merge. Runtime demos work
+on current `main`; the delivery documents and `scripts/verify_demo.py` become
+available there after that merge. Before then, reviewers can use PR #4's
+branch for the complete walkthrough. Test outcomes, environments, and skips
 are recorded in [PLAN.md](PLAN.md).
 
 ## 1. Establish a quiet baseline

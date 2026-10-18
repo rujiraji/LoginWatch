@@ -5,9 +5,10 @@ logs. It summarizes activity and explains repeated failures, success after
 failures, and failures across multiple accounts using supporting source lines.
 Findings are investigation signals, not proof of compromise.
 
-Phases 1–3 are Accepted. Phase 4 is **Implemented — awaiting review**; no tag
-or GitHub release has been published. Acceptance and verification history are
-in [docs/PLAN.md](docs/PLAN.md).
+All four planned phases are **Accepted and complete**. LoginWatch is
+**release-ready and unpublished**; PR #4 awaits the owner's final merge.
+No tag or GitHub release has been published. Acceptance and verification
+history are in [docs/PLAN.md](docs/PLAN.md).
 
 ## Quick start
 
@@ -90,7 +91,7 @@ errors exit 1; argument errors exit 2. GitHub Actions runs unittest on Python
 3.11 and 3.14 on Ubuntu and Windows; observed outcomes and platform skips are
 recorded in [PLAN](docs/PLAN.md), not inferred from the workflow definition.
 
-- [Proposed first-release notes](docs/RELEASE_NOTES.md)
+- [First-release notes — accepted, unpublished](docs/RELEASE_NOTES.md)
 - [Portfolio description, contribution disclosure, and proposed résumé wording](docs/PORTFOLIO.md)
 
 The owner defined requirements, design decisions, and phase acceptance.

@@ -10,7 +10,11 @@ Codex: implementation, tests, documentation, and verification evidence.
 | 1. Parser and activity summary | Accepted |
 | 2. Detection and evidence | Accepted |
 | 3. Configuration and JSON reports | Accepted |
-| 4. Release and portfolio delivery | Implemented — awaiting review |
+| 4. Release and portfolio delivery | Accepted |
+
+All four planned phases are complete. The project is **Accepted and
+release-ready, unpublished**. PR #4 awaits the owner's final merge; no tag or
+GitHub release has been published.
 
 Use Planned, Ready to implement, In progress, Implemented — awaiting review, or Accepted. Codex records implementation and checks; owner review determines acceptance.
 
@@ -82,12 +86,14 @@ Phase 2 is Accepted following independent review of commit
 `f179620ddd0adefde9432051b362f46633db326e`. Phase 3 is Accepted following
 independent review of commit `16751333a60bec6f93ec6568a46ecefb08d63966` in PR #3.
 The owner merged PR #3 at `5e7c9cac31e8ea21d581a71ab80c1abbf2c14adc`.
-Phase 4 is Implemented — awaiting review on `phase-4-delivery`: concise README,
-walkthrough, architecture/interview notes, proposed release/résumé wording,
-minimal CI, and fresh-checkout/demo verification. Keep runtime scope unchanged.
-Commit, push, open a PR using the authenticated terminal's `gh`, report actual
-verification/CI outcomes and limits, and stop for independent review. Do not
-merge PRs, create tags, publish a release, or claim final acceptance as Codex.
+Phase 4 is Accepted after owner-reported independent review of commit
+`5df114e2da0ce37590e840822122e2d3a07aeb30`, PR #4. All four planned phases
+are complete; finalize acceptance documentation only on `phase-4-delivery`.
+Record independent review separately from Codex's checks, run the tests/demo
+verifier and diff checks, commit/push documentation updates, and inspect PR #4's
+latest CI. The project is accepted and release-ready, unpublished. Stop with
+PR #4 ready for the owner's final merge. Do not merge, create tags, publish a
+release, or add features.
 
 ## Phase 1 implementation and verification
 
@@ -436,11 +442,12 @@ phase boundaries. The local Windows six-skip result remains a separate host
 limitation, not a skipped CI check. Subsequent documentation-only commits can
 produce additional runs; consult PR #4 for checks on its latest head.
 
-### Review boundary and remaining limits
+### Implementation handoff and remaining limits
 
-PR #4 prepares a reviewable delivery candidate. Phase 4 is **Implemented —
-awaiting review**. Only the owner may accept or merge it. No tag, GitHub release,
-or final acceptance was created or claimed by Codex.
+At implementation handoff, PR #4 was a reviewable delivery candidate and
+Phase 4 was Implemented — awaiting review. Codex did not merge, create a tag,
+publish a release, or grant acceptance. The owner's subsequent acceptance is
+recorded below.
 
 Runtime modules, existing tests, and fixtures remain unchanged from the
 accepted Phase 3 baseline, confirmed with `git diff --name-only main --` for
@@ -452,3 +459,71 @@ changes or guarantee directory-entry crash durability. Fresh-checkout demos
 were exercised locally on Windows 3.14.6; CI ran the unittest suite, not the
 separate demo verifier. Independent reviews supplied by the owner remain
 distinct from the Codex and CI results above.
+
+## Phase 4 acceptance and independent review
+
+On 2026-10-17, the owner accepted Phase 4 after independent review of commit
+`5df114e2da0ce37590e840822122e2d3a07aeb30`, PR #4. These results were supplied
+by the owner and are separate from checks run by Codex:
+
+- Linux/Python 3.12.14, new environment without pip or installed distributions: all 138 tests passed without skips.
+- The demo verifier and both literal export commands passed.
+- All four final-commit CI jobs were independently confirmed: 138 tests, no skips, Python 3.11/3.14 on Ubuntu/Windows.
+- Runtime code, existing tests, and fixtures remained unchanged.
+- Documentation and relative file links were checked.
+- No blocking issues were found.
+
+All four planned phases are now Accepted and complete. Acceptance is based on
+the owner's decision; it is separate from merging, tagging, or publishing a
+release. The project is release-ready and unpublished. Large-log performance
+remains unverified; the documented runtime and data-sensitivity limits remain.
+
+### Final-commit CI evidence for the accepted implementation
+
+[CI run 38804749008](https://github.com/rujiraji/LoginWatch/actions/runs/38804749008)
+is associated with reviewed commit
+`5df114e2da0ce37590e840822122e2d3a07aeb30`. Codex rechecked its completed
+job results and logs on 2026-10-17:
+
+| Matrix job | Reported interpreter | Unittest result | Skips |
+| --- | --- | --- | --- |
+| ubuntu-latest / Python 3.11 | 3.11.17 | 138 tests, OK | 0 |
+| ubuntu-latest / Python 3.14 | 3.14.8 | 138 tests, OK | 0 |
+| windows-latest / Python 3.11 | 3.11.9 | 138 tests, OK | 0 |
+| windows-latest / Python 3.14 | 3.14.8 | 138 tests, OK | 0 |
+
+The CI command was `python -m unittest discover -s tests -v`. These are
+observed results, also independently confirmed by the reviewer. The earlier
+run for `76b5f3b` remains historical evidence; this run verifies the final
+implementation commit reviewed for acceptance. Acceptance-documentation
+updates trigger fresh checks, visible on PR #4's latest head.
+
+### Codex acceptance-finalization checks
+
+On 2026-10-17, Codex verified the actual repository root and `origin` URL for
+`https://github.com/rujiraji/LoginWatch`. Before editing documentation, the
+working tree was clean on `phase-4-delivery`; `HEAD` and the fetched remote
+branch matched `5df114e2da0ce37590e840822122e2d3a07aeb30`, and
+`git diff 5df114e2da0ce37590e840822122e2d3a07aeb30 --` was empty. No unrelated
+work was present or overwritten. Only documentation is changed for acceptance;
+runtime modules, tests, fixtures, verifier, and CI workflow remain unchanged.
+
+Checks run by Codex on Windows, Python 3.14.6:
+
+| Exact command | Observed result |
+| --- | --- |
+| `python --version` | Python 3.14.6, exit 0 |
+| `python -m unittest discover -s tests` | `Ran 138 tests`; `OK (skipped=6)`, exit 0; local symlink creation privilege remains unavailable |
+| `python scripts/verify_demo.py` | Exit 0; seven demo/help commands plus two repeat exports, complete JSON/evidence, byte equality, source preservation, and temporary export cleanup passed |
+| `python loginwatch.py samples/sample.log` | Exit 0; 9 events, 4 successes, 5 failures, 3 IPs, 5 usernames, 2 blank lines, 4 skipped lines, zero findings |
+| `git diff --check` | Passed |
+| `git fetch origin` | Completed successfully; `origin/main` remained at Phase 3 merge commit `5e7c9cac31e8ea21d581a71ab80c1abbf2c14adc` |
+| `git ls-remote --tags origin` | No tags returned |
+| `gh release list --repo rujiraji/LoginWatch --json tagName,isDraft,isPrerelease` | Empty list |
+
+The walkthrough now uses `main` for ongoing clone instructions and states that
+the delivery documents/verifier reach `main` after the owner's final merge.
+The authenticated terminal's `gh` CLI confirmed PR #4 remains OPEN and unmerged.
+After pushing documentation, check its latest CI and stop with the PR ready
+for the owner. No merge, tag, release publication, feature work, or additional
+phase is included in this acceptance finalization.

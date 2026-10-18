@@ -1,8 +1,9 @@
-# Proposed first-release notes
+# First-release notes — accepted, unpublished
 
-Status: Phase 4 Implemented — awaiting review. This is a proposed release
-description, not a published release or final acceptance. No tag has been
-created. The owner decides whether to accept and release the project.
+Status: **Accepted and release-ready, unpublished**. All four planned phases
+are complete. The owner accepted Phase 4 following independent review of
+commit `5df114e2da0ce37590e840822122e2d3a07aeb30`, PR #4. The PR awaits the
+owner's final merge. No tag or GitHub release has been published.
 
 ## Delivered behavior
 
@@ -47,8 +48,37 @@ installations, and performs no application package install. Python 3.11 is now
 verified by these runs; it was unverified at earlier phase boundaries. CI runs
 unittest; the separate fresh-checkout demo verification was local on Windows.
 The run is associated with branch head `76b5f3bc1f38e4094de75b5fe6d00f8230e82061`;
-PR #4 shows checks for later documentation-only updates. Detailed commands and
-evidence are in [PLAN.md](PLAN.md).
+the reviewed final implementation commit is covered separately below.
+
+### Reviewed final-commit CI evidence
+
+[CI run 38804749008](https://github.com/rujiraji/LoginWatch/actions/runs/38804749008)
+for reviewed commit `5df114e2da0ce37590e840822122e2d3a07aeb30` passed all four
+jobs: Ubuntu/Python 3.11.17 and 3.14.8, Windows/Python 3.11.9 and 3.14.8.
+Each job ran **138 tests with no skips**. Codex rechecked the job results and
+logs during acceptance finalization on 2026-10-17. PR #4 displays CI for any
+subsequent acceptance-documentation commit.
+
+### Independent Phase 4 review reported by the owner
+
+These results are separate from checks run by Codex. The reviewer used Linux,
+Python 3.12.14, and a new environment without pip or installed distributions:
+all 138 tests passed without skips. The demo verifier and both literal export
+commands passed. The reviewer independently confirmed all four final-commit
+CI jobs (138 tests, no skips, Python 3.11/3.14 on Ubuntu/Windows), unchanged
+runtime code/existing tests/fixtures, documentation, and relative file links.
+No blocking issues were found. The reviewed commit was
+`5df114e2da0ce37590e840822122e2d3a07aeb30`, PR #4.
+
+### Codex acceptance-finalization checks
+
+On 2026-10-17, Windows/Python 3.14.6: `python -m unittest discover -s tests`
+reported `Ran 138 tests; OK (skipped=6)`, exit 0, due to local symlink creation
+privileges. `python scripts/verify_demo.py` and the documented parsing sample
+command passed; the verifier checked all seven demo/help commands, full JSON
+evidence, identical repeat bytes, source preservation, and temporary export
+cleanup. `git diff --check` passed. Only documentation changed after the
+reviewed commit. Detailed commands and evidence are in [PLAN.md](PLAN.md).
 
 ## Known limits
 

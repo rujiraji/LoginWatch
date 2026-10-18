@@ -35,7 +35,9 @@ For a project page, the description can add:
 > validation, and atomic export safeguards, with synthetic fixtures and a
 > repeatable demo documenting expected results and limitations.
 
-These are proposed statements for owner review. They claim no deployment,
+These are proposed résumé statements for owner adaptation. They claim no deployment,
 user adoption, incident prevention, throughput, time savings, or performance
 improvement. Test and CI outcomes belong in the verification record; they
-are not business-impact metrics. Phase 4 delivery remains awaiting review.
+are not business-impact metrics. All four planned project phases are Accepted
+and complete. The project is release-ready and unpublished; PR #4 awaits the
+owner's final merge.
